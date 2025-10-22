@@ -1,0 +1,191 @@
+{
+  "environment": {
+    "mode": "demo",
+    "timezone": "America/Bogota",
+    "daily_close_time": "16:00"
+  },
+  "mt5_account": {
+    "demo": {
+      "login": 19498321,
+      "password": "%6Qn4Er[",
+      "server": "Weltrade-Demo"
+    },
+    "live": {
+      "login": 34279304,
+      "password": "E6m%W#w9",
+      "server": "Weltrade-Live"
+    }
+  },
+  "broker": {
+    "name": "Weltrade",
+    "company": "Systemgates Limited",
+    "leverage": 10000,
+    "currency": "USD"
+  },
+  "symbols": {
+    "pain": [
+      "PainX 400",
+      "PainX 600",
+      "PainX 800",
+      "PainX 999"
+    ],
+    "gain": [
+      "GainX 400",
+      "GainX 600",
+      "GainX 800",
+      "GainX 999"
+    ],
+    "other": [
+      "FX Vol 20",
+      "FX Vol 40",
+      "FX Vol 60",
+      "FX Vol 80",
+      "FX Vol 99",
+      "FlipX 1",
+      "FlipX 2",
+      "FlipX 3",
+      "FlipX 4",
+      "FlipX 5"
+    ]
+  },
+  "trading": {
+    "default_symbol": "PainX 400",
+    "default_timeframe": "M1",
+    "timeframes": [
+      "M1",
+      "M5",
+      "M15",
+      "M30",
+      "H1",
+      "H4",
+      "D1"
+    ],
+    "lot_size": 0.10,
+    "max_lot_size": 1.0,
+    "min_lot_size": 0.01,
+    "lot_step": 0.01,
+    "risk_per_trade_percent": 1.0,
+    "max_concurrent_orders": 3,
+    "daily_target_usd": 100.0,
+    "daily_stop_usd": 40.0,
+    "trade_target_usd": 2.0,
+    "max_spread_pips": 2.0,
+    "max_slippage_pips": 2.0
+  },
+  "strategy": {
+    "pain_sell": {
+      "enabled": true,
+      "d1_wick_threshold_percent": 50.0,
+      "h4_fibonacci_level": 0.5,
+      "hold_time_minutes": 5,
+      "wait_candles_after_close": 1
+    },
+    "gain_buy": {
+      "enabled": true,
+      "d1_wick_threshold_percent": 50.0,
+      "h4_fibonacci_level": 0.5,
+      "hold_time_minutes": 5,
+      "wait_candles_after_close": 1
+    }
+  },
+  "indicators": {
+    "snake": {
+      "period": 100,
+      "type": "EMA"
+    },
+    "shingle": {
+      "period": 100,
+      "type": "EMA"
+    },
+    "purple_line": {
+      "period": 50,
+      "type": "SMA"
+    },
+    "rsi": {
+      "period": 14,
+      "overbought": 90,
+      "oversold": 10
+    }
+  },
+  "risk_management": {
+    "enable_daily_stop": true,
+    "enable_daily_target": true,
+    "enable_trailing_stop": false,
+    "trailing_stop_pips": 10.0,
+    "use_fixed_lot": true,
+    "use_percentage_risk": false
+  },
+  "session": {
+    "trading_hours": {
+      "start": "19:00",
+      "end": "06:00"
+    },
+    "enabled": true,
+    "timezone": "America/Bogota"
+  },
+  "news_filter": {
+    "enabled": false,
+    "high_impact_buffer_minutes": 30,
+    "medium_impact_buffer_minutes": 15,
+    "source": "forexfactory"
+  },
+  "server": {
+    "host": "127.0.0.1",
+    "ports": [8765, 8766, 8767, 8768, 8769],
+    "auto_open_browser": true,
+    "update_interval_seconds": 1,
+    "reconnect_interval_seconds": 3,
+    "max_reconnect_attempts": 10
+  },
+  "logging": {
+    "enabled": true,
+    "level": "INFO",
+    "log_directory": "logs",
+    "log_file_prefix": "trading_bot",
+    "log_rotation": "daily",
+    "keep_logs_days": 30,
+    "console_output": true,
+    "file_output": true
+  },
+  "backtest": {
+    "enabled": false,
+    "start_date": "2024-01-01",
+    "end_date": "2024-12-31",
+    "initial_balance": 500.0,
+    "generate_reports": true,
+    "export_trades_csv": true
+  },
+  "notifications": {
+    "telegram": {
+      "enabled": false,
+      "bot_token": "",
+      "chat_id": ""
+    },
+    "email": {
+      "enabled": false,
+      "smtp_server": "",
+      "smtp_port": 587,
+      "username": "",
+      "password": "",
+      "from_email": "",
+      "to_email": ""
+    },
+    "desktop": {
+      "enabled": true,
+      "on_trade_open": true,
+      "on_trade_close": true,
+      "on_daily_target": true,
+      "on_daily_stop": true,
+      "on_error": true
+    }
+  },
+  "dashboard": {
+    "title": "MT5 Real-Time Trading Dashboard",
+    "theme": "dark",
+    "auto_refresh": true,
+    "show_positions": true,
+    "show_account_info": true,
+    "show_chart": true,
+    "chart_bars_count": 100
+  }
+}

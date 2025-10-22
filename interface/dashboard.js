@@ -10,8 +10,9 @@ let serverConfig = null; // Will be loaded from server
 function initializeChart() {
     const ctx = document.getElementById('priceChart').getContext('2d');
     chart = new Chart(ctx, {
-        type: 'candlestick',
+        type: 'line',
         data: {
+            labels: [],
             datasets: [{
                 label: 'Price',
                 data: []
@@ -22,15 +23,13 @@ function initializeChart() {
             maintainAspectRatio: false,
             scales: {
                 x: {
-                    type: 'time',
-                    time: {
-                        unit: 'minute'
-                    },
                     grid: {
                         color: 'rgba(255, 255, 255, 0.1)'
                     },
                     ticks: {
-                        color: '#00d4ff'
+                        color: '#00d4ff',
+                        maxRotation: 45,
+                        minRotation: 45
                     }
                 },
                 y: {

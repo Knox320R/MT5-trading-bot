@@ -23,7 +23,8 @@ class Config:
         if config_file:
             self._config_file = config_file
 
-        config_path = os.path.join(os.path.dirname(__file__), self._config_file)
+        # Look for config in parent directory (project root)
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self._config_file)
 
         if not os.path.exists(config_path):
             raise FileNotFoundError(f"Configuration file not found: {config_path}")
@@ -38,7 +39,8 @@ class Config:
         if config_file:
             self._config_file = config_file
 
-        config_path = os.path.join(os.path.dirname(__file__), self._config_file)
+        # Save to parent directory (project root)
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), self._config_file)
 
         with open(config_path, 'w', encoding='utf-8') as f:
             json.dump(self._config_data, f, indent=2)
