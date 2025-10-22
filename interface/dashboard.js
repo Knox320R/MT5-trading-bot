@@ -439,18 +439,6 @@ function setupEventListeners() {
             }));
         }
     });
-
-    // Handle Show High checkbox
-    document.getElementById('showHighCheckbox').addEventListener('change', (e) => {
-        chart.data.datasets[1].hidden = !e.target.checked;
-        chart.update('none');
-    });
-
-    // Handle Show Low checkbox
-    document.getElementById('showLowCheckbox').addEventListener('change', (e) => {
-        chart.data.datasets[2].hidden = !e.target.checked;
-        chart.update('none');
-    });
 }
 
 // Initialize on page load
