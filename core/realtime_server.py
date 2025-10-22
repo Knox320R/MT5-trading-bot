@@ -22,23 +22,31 @@ class RealtimeDataServer:
 
     async def register_client(self, websocket):
         """Register a new WebSocket client"""
-        self.clients.add(websocket)
-        print(f"Client connected. Total clients: {len(self.clients)}")
+        try:
+            self.clients.add(websocket)
+            print(f"✓ Client connected. Total clients: {len(self.clients)}")
 
-        # Send initial config to client
-        await websocket.send(json.dumps({
-            'type': 'config',
-            'data': {
-                'symbols': config.get_all_symbols(),
-                'pain_symbols': config.get_pain_symbols(),
-                'gain_symbols': config.get_gain_symbols(),
-                'timeframes': config.get_timeframes(),
-                'default_symbol': config.get_default_symbol(),
-                'default_timeframe': config.get_default_timeframe(),
-                'dashboard_title': config.get_dashboard_title(),
-                'environment': config.get_environment_mode()
+            # Send initial config to client
+            config_data = {
+                'type': 'config',
+                'data': {
+                    'symbols': config.get_all_symbols(),
+                    'pain_symbols': config.get_pain_symbols(),
+                    'gain_symbols': config.get_gain_symbols(),
+                    'timeframes': config.get_timeframes(),
+                    'default_symbol': config.get_default_symbol(),
+                    'default_timeframe': config.get_default_timeframe(),
+                    'dashboard_title': config.get_dashboard_title(),
+                    'environment': config.get_environment_mode()
+                }
             }
-        }))
+            print(f"  Sending initial config...")
+            await websocket.send(json.dumps(config_data))
+            print(f"  ✓ Config sent successfully")
+        except Exception as e:
+            print(f"✗ Error registering client: {e}")
+            import traceback
+            traceback.print_exc()
 
     async def unregister_client(self, websocket):
         """Unregister a WebSocket client"""
@@ -106,16 +114,24 @@ class RealtimeDataServer:
         except Exception as e:
             print(f"Error handling client message: {e}")
 
-    async def websocket_handler(self, websocket, path):
+    async def websocket_handler(self, websocket):
         """Handle WebSocket connections"""
-        await self.register_client(websocket)
+        print(f"New WebSocket connection attempt from {websocket.remote_address}")
         try:
+            await self.register_client(websocket)
             async for message in websocket:
                 await self.handle_client_message(websocket, message)
-        except websockets.exceptions.ConnectionClosed:
-            pass
+        except websockets.exceptions.ConnectionClosed as e:
+            print(f"Connection closed: {e}")
+        except Exception as e:
+            print(f"✗ WebSocket handler error: {e}")
+            import traceback
+            traceback.print_exc()
         finally:
-            await self.unregister_client(websocket)
+            try:
+                await self.unregister_client(websocket)
+            except Exception as e:
+                print(f"Error unregistering client: {e}")
 
     async def stream_market_data(self):
         """Stream market data to connected clients"""
@@ -128,8 +144,11 @@ class RealtimeDataServer:
         print(f"Symbol: {self.current_symbol}")
         print(f"Timeframe: {self.timeframe}")
         print(f"Update interval: {self.update_interval}s")
+        print()
 
+        iteration = 0
         while self.running:
+            iteration += 1
             try:
                 # Get current tick
                 tick = self.connector.get_current_tick(self.current_symbol)
@@ -151,6 +170,10 @@ class RealtimeDataServer:
                 symbol_info = self.connector.get_symbol_info(self.current_symbol)
 
                 if tick and bars:
+                    # Print update every 10 iterations (every 10 seconds)
+                    if iteration % 10 == 1:
+                        print(f"[{iteration}] Streaming data - Bid: {tick['bid']}, Clients: {len(self.clients)}")
+
                     data = {
                         'type': 'market_update',
                         'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
@@ -166,6 +189,7 @@ class RealtimeDataServer:
                     await self.send_data_to_clients(data)
                 elif not bars:
                     # Symbol might not exist or no data available
+                    print(f"⚠ No data available for {self.current_symbol}")
                     error_data = {
                         'type': 'error',
                         'message': f"No data available for {self.current_symbol}. Symbol might not exist."
@@ -176,7 +200,9 @@ class RealtimeDataServer:
                 await asyncio.sleep(self.update_interval)
 
             except Exception as e:
-                print(f"Error in market data stream: {e}")
+                print(f"✗ Error in market data stream: {e}")
+                import traceback
+                traceback.print_exc()
                 await asyncio.sleep(5)
 
         self.connector.disconnect()
@@ -207,10 +233,32 @@ class RealtimeDataServer:
 
         # Open browser automatically
         if open_browser:
-            dashboard_path = os.path.join(os.path.dirname(__file__), 'interface', 'index.html')
+            # Fix path - go up one directory from core/
+            project_root = os.path.dirname(os.path.dirname(__file__))
+            dashboard_path = os.path.join(project_root, 'interface', 'index.html')
             dashboard_url = f'file:///{dashboard_path.replace(os.sep, "/")}'
-            print(f"Opening dashboard in browser...")
-            webbrowser.open(dashboard_url)
+            print(f"Opening dashboard in Chrome...")
+
+            # Try to open in Chrome specifically
+            chrome_path = None
+            possible_chrome_paths = [
+                r'C:\Program Files\Google\Chrome\Application\chrome.exe',
+                r'C:\Program Files (x86)\Google\Chrome\Application\chrome.exe',
+                os.path.expanduser(r'~\AppData\Local\Google\Chrome\Application\chrome.exe'),
+            ]
+
+            for path in possible_chrome_paths:
+                if os.path.exists(path):
+                    chrome_path = path
+                    break
+
+            if chrome_path:
+                webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
+                webbrowser.get('chrome').open(dashboard_url)
+                print(f"✓ Opened in Chrome")
+            else:
+                print("Chrome not found, using default browser...")
+                webbrowser.open(dashboard_url)
 
         # Start market data streaming in background
         asyncio.create_task(self.stream_market_data())

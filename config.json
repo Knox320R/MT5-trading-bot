@@ -133,6 +133,7 @@
     "host": "127.0.0.1",
     "ports": [8765, 8766, 8767, 8768, 8769],
     "auto_open_browser": true,
+    "preferred_browser": "chrome",
     "update_interval_seconds": 1,
     "reconnect_interval_seconds": 3,
     "max_reconnect_attempts": 10
