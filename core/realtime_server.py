@@ -9,7 +9,6 @@ from .mt5_connector import MT5Connector
 from .config_loader import config
 from .signal_detector import SignalDetector
 from .csv_recorder import CSVRecorder
-from .analysis_recorder import AnalysisRecorder
 
 # Set Windows-specific event loop policy
 if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
@@ -25,7 +24,6 @@ class RealtimeDataServer:
         self.update_interval = config.get_update_interval()
         self.signal_detector = SignalDetector(self.connector)
         self.csv_recorder = CSVRecorder()
-        self.analysis_recorder = AnalysisRecorder()
 
     async def register_client(self, websocket):
         """Register a new WebSocket client"""
@@ -171,22 +169,16 @@ class RealtimeDataServer:
                 all_symbols = config.get_all_symbols()
 
                 for symbol in all_symbols:
-                    # Get detailed analysis data for this symbol (for testing/analysis purposes)
-                    analysis_data = self.signal_detector.get_analysis_data(symbol)
-                    if analysis_data:
-                        # Record all analysis data to analysis CSV (even if not perfect signal)
-                        self.analysis_recorder.record_analysis(analysis_data)
-
                     # Detect perfect signals for this symbol
                     signals = self.signal_detector.detect_signals(symbol)
 
-                    # Process each detected signal
+                    # Process each detected perfect signal
                     for signal in signals:
                         if signal['met']:
                             # Print signal notification
                             print(f"🎯 SIGNAL DETECTED: {signal['type']} {signal['symbol']} @ {signal['price']:.5f}")
 
-                            # Record to perfect signals CSV
+                            # Record to CSV
                             self.csv_recorder.record_signal(signal)
 
                             # Broadcast to all connected clients
@@ -283,7 +275,6 @@ class RealtimeDataServer:
         # Cleanup
         self.connector.disconnect()
         self.csv_recorder.close()
-        self.analysis_recorder.close()
 
     async def start(self, host=None, port=None, open_browser=None):
         """Start the WebSocket server"""

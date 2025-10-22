@@ -13,6 +13,7 @@ overview/
 logs/
 trade_history/
 documents/
+Report/
 
 # Config (contains credentials)
 # config.json  # Uncomment to exclude

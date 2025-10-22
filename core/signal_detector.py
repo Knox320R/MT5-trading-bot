@@ -372,19 +372,20 @@ class SignalDetector:
             'M1': data['M1']['snake_color'],
         }
 
-        # Build purple line positions
+        # Build purple line positions (relative to price)
         purple_positions = {
-            'D1': data['D1']['purple_line_position'],
-            'H4': data['H4']['purple_line_position'],
-            'H1': data['H1']['purple_line_position'],
-            'M30': data['M30']['purple_line_position'],
-            'M15': data['M15']['purple_line_position'],
-            'M5': data['M5']['purple_line_position'],
-            'M1': data['M1']['purple_line_position'],
+            'D1': data['D1']['price_vs_purple'],
+            'H4': data['H4']['price_vs_purple'],
+            'H1': data['H1']['price_vs_purple'],
+            'M30': data['M30']['price_vs_purple'],
+            'M15': data['M15']['price_vs_purple'],
+            'M5': data['M5']['price_vs_purple'],
+            'M1': data['M1']['price_vs_purple'],
         }
 
         # Analyze conditions
-        d1_wick = self.analyze_d1_wick(data.get('D1'))
+        d1_wick_result = self.analyze_d1_wick(data['D1']['bars']) if 'D1' in data else (None, False)
+        d1_wick = d1_wick_result[0] if d1_wick_result[0] else 'NEUTRAL'
         h4_fib = self.check_fibonacci_retracement(data.get('H4'), data.get('M15'))
 
         # Detect purple line breakout
