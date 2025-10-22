@@ -37,6 +37,22 @@ function initializeChart() {
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false
+                },
+                {
+                    label: 'Snake (EMA 100)',
+                    data: [],
+                    borderColor: '#ffaa00',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false
+                },
+                {
+                    label: 'Purple Line (EMA 10)',
+                    data: [],
+                    borderColor: '#9900ff',
+                    borderWidth: 2,
+                    tension: 0.4,
+                    fill: false
                 }
             ]
         },
@@ -249,6 +265,29 @@ function updateMarketData(data) {
     showError('');
 }
 
+// Calculate EMA (Exponential Moving Average)
+function calculateEMA(data, period) {
+    const ema = [];
+    const multiplier = 2 / (period + 1);
+
+    // Start with SMA for first value
+    let sum = 0;
+    for (let i = 0; i < period && i < data.length; i++) {
+        sum += data[i];
+    }
+    let previousEMA = sum / Math.min(period, data.length);
+    ema.push(previousEMA);
+
+    // Calculate EMA for remaining values
+    for (let i = 1; i < data.length; i++) {
+        const currentEMA = (data[i] - previousEMA) * multiplier + previousEMA;
+        ema.push(currentEMA);
+        previousEMA = currentEMA;
+    }
+
+    return ema;
+}
+
 // Update chart with candlestick data
 function updateChart(bars, symbol, timeframe) {
     document.getElementById('chartSymbol').textContent = symbol;
@@ -260,6 +299,10 @@ function updateChart(bars, symbol, timeframe) {
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
+    // Calculate EMAs
+    const snake = calculateEMA(closePrices, 100);  // Snake: EMA 100
+    const purpleLine = calculateEMA(closePrices, 10);  // Purple Line: EMA 10
+
     // Update labels
     chart.data.labels = labels;
 
@@ -267,6 +310,8 @@ function updateChart(bars, symbol, timeframe) {
     chart.data.datasets[0].data = closePrices;
     chart.data.datasets[1].data = highPrices;
     chart.data.datasets[2].data = lowPrices;
+    chart.data.datasets[3].data = snake;
+    chart.data.datasets[4].data = purpleLine;
 
     // Update without animation
     chart.update('none');
