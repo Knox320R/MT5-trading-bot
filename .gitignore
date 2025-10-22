@@ -1,0 +1,11 @@
+overview
+logs
+
+*.rar
+*.txt
+*.pdf
+
+config.json
+.claude
+trade_history
+documents

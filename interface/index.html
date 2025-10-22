@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MT5 Real-Time Trading Dashboard</title>
+    <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>
+                MT5 Real-Time Trading Dashboard
+                <span id="statusIndicator" class="status disconnected">DISCONNECTED</span>
+            </h1>
+
+            <div class="controls">
+                <div class="control-group">
+                    <label for="symbolSelect">Symbol:</label>
+                    <select id="symbolSelect">
+                        <option value="PainX 400">PainX 400</option>
+                        <option value="PainX 600">PainX 600</option>
+                        <option value="PainX 800">PainX 800</option>
+                        <option value="PainX 999">PainX 999</option>
+                        <option value="GainX 400">GainX 400</option>
+                        <option value="GainX 600">GainX 600</option>
+                        <option value="GainX 800">GainX 800</option>
+                        <option value="GainX 999">GainX 999</option>
+                        <option value="FX Vol 20">FX Vol 20</option>
+                        <option value="FX Vol 40">FX Vol 40</option>
+                        <option value="FX Vol 60">FX Vol 60</option>
+                        <option value="FlipX 1">FlipX 1</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="timeframeSelect">Timeframe:</label>
+                    <select id="timeframeSelect">
+                        <option value="M1">M1 (1 Minute)</option>
+                        <option value="M5">M5 (5 Minutes)</option>
+                        <option value="M15">M15 (15 Minutes)</option>
+                        <option value="M30">M30 (30 Minutes)</option>
+                        <option value="H1">H1 (1 Hour)</option>
+                        <option value="H4">H4 (4 Hours)</option>
+                        <option value="D1">D1 (1 Day)</option>
+                    </select>
+                </div>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Current Bid</div>
+                <div id="bidPrice" class="card-value">--</div>
+                <div class="timestamp">Waiting for data...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Current Ask</div>
+                <div id="askPrice" class="card-value">--</div>
+                <div class="timestamp">Waiting for data...</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Spread</div>
+                <div id="spread" class="card-value">--</div>
+                <div class="timestamp">Points</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Account Balance</div>
+                <div id="balance" class="card-value">--</div>
+                <div class="timestamp">USD</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Account Equity</div>
+                <div id="equity" class="card-value">--</div>
+                <div class="timestamp">USD</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Current Profit</div>
+                <div id="profit" class="card-value">--</div>
+                <div class="timestamp">USD</div>
+            </div>
+        </div>
+
+        <div id="errorContainer"></div>
+
+        <div class="chart-container">
+            <div class="chart-title">Price Chart - <span id="chartSymbol">--</span> (<span id="chartTimeframe">--</span>)</div>
+            <canvas id="priceChart"></canvas>
+        </div>
+
+        <div class="card">
+            <div class="card-title">Open Positions</div>
+            <div id="positionsContainer">
+                <div class="no-data">No open positions</div>
+            </div>
+        </div>
+    </div>
+
+    <script src="dashboard.js"></script>
+</body>
+</html>
