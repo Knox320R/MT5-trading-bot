@@ -338,6 +338,141 @@ class SignalDetector:
 
         return conditions
 
+    def get_analysis_data(self, symbol):
+        """
+        Get detailed analysis data for a symbol, even if conditions are not fully met.
+        This is used for analysis recording to track all potential moments.
+
+        Returns:
+            Dictionary with comprehensive analysis information
+        """
+        # Get multi-timeframe data
+        data = self.get_multi_timeframe_data(symbol)
+
+        if not data or 'M1' not in data:
+            return None
+
+        # Get current tick for bid/ask
+        tick = self.connector.get_current_tick(symbol)
+        if not tick:
+            return None
+
+        # Determine symbol type
+        is_pain = 'Pain' in symbol
+        is_gain = 'Gain' in symbol
+
+        # Build snake colors dict
+        snake_colors = {
+            'D1': data['D1']['snake_color'],
+            'H4': data['H4']['snake_color'],
+            'H1': data['H1']['snake_color'],
+            'M30': data['M30']['snake_color'],
+            'M15': data['M15']['snake_color'],
+            'M5': data['M5']['snake_color'],
+            'M1': data['M1']['snake_color'],
+        }
+
+        # Build purple line positions
+        purple_positions = {
+            'D1': data['D1']['purple_line_position'],
+            'H4': data['H4']['purple_line_position'],
+            'H1': data['H1']['purple_line_position'],
+            'M30': data['M30']['purple_line_position'],
+            'M15': data['M15']['purple_line_position'],
+            'M5': data['M5']['purple_line_position'],
+            'M1': data['M1']['purple_line_position'],
+        }
+
+        # Analyze conditions
+        d1_wick = self.analyze_d1_wick(data.get('D1'))
+        h4_fib = self.check_fibonacci_retracement(data.get('H4'), data.get('M15'))
+
+        # Detect purple line breakout
+        (breakout_down, touchback_down), (breakout_up, touchback_up) = self.detect_purple_line_breakout(data['M1'], data['M5'])
+
+        purple_breakout = 'NONE'
+        if breakout_up and touchback_up:
+            purple_breakout = 'UP+TOUCHBACK'
+        elif breakout_down and touchback_down:
+            purple_breakout = 'DOWN+TOUCHBACK'
+        elif breakout_up:
+            purple_breakout = 'UP'
+        elif breakout_down:
+            purple_breakout = 'DOWN'
+
+        # Check which signal types could be close
+        could_pain_sell = False
+        could_gain_sell = False
+        could_pain_buy = False
+        could_gain_buy = False
+        missing_conditions = []
+
+        if is_pain:
+            # Check PAIN SELL potential
+            pain_sell_result = self.check_pain_sell_conditions(symbol, data)
+            could_pain_sell = pain_sell_result['met']
+            if not could_pain_sell:
+                # Extract missing conditions from reasons
+                for reason in pain_sell_result['reasons']:
+                    if '✓' not in reason:
+                        missing_conditions.append(f"PAIN_SELL: {reason}")
+
+            # Check PAIN BUY potential
+            pain_buy_result = self.check_pain_buy_conditions(symbol, data)
+            could_pain_buy = pain_buy_result['met']
+            if not could_pain_buy:
+                for reason in pain_buy_result['reasons']:
+                    if '✓' not in reason:
+                        missing_conditions.append(f"PAIN_BUY: {reason}")
+
+        if is_gain:
+            # Check GAIN SELL potential
+            gain_sell_result = self.check_gain_sell_conditions(symbol, data)
+            could_gain_sell = gain_sell_result['met']
+            if not could_gain_sell:
+                for reason in gain_sell_result['reasons']:
+                    if '✓' not in reason:
+                        missing_conditions.append(f"GAIN_SELL: {reason}")
+
+            # Check GAIN BUY potential
+            gain_buy_result = self.check_gain_buy_conditions(symbol, data)
+            could_gain_buy = gain_buy_result['met']
+            if not could_gain_buy:
+                for reason in gain_buy_result['reasons']:
+                    if '✓' not in reason:
+                        missing_conditions.append(f"GAIN_BUY: {reason}")
+
+        # Build notes
+        notes = []
+        if len(missing_conditions) == 0:
+            notes.append("ALL CONDITIONS MET!")
+
+        # Count how many snakes are green/red
+        green_count = sum(1 for color in snake_colors.values() if color == 'green')
+        red_count = sum(1 for color in snake_colors.values() if color == 'red')
+        notes.append(f"Snakes: {green_count} green, {red_count} red")
+
+        return {
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'symbol': symbol,
+            'price': data['M1']['close'],
+            'bid': tick['bid'],
+            'ask': tick['ask'],
+            'spread': tick['spread'],
+            'snake_colors': snake_colors,
+            'purple_positions': purple_positions,
+            'd1_bias': d1_wick,
+            'h4_fib_met': h4_fib,
+            'purple_breakout': purple_breakout,
+            'purple_touchback': (breakout_up and touchback_up) or (breakout_down and touchback_down),
+            'could_pain_sell': could_pain_sell,
+            'could_gain_sell': could_gain_sell,
+            'could_pain_buy': could_pain_buy,
+            'could_gain_buy': could_gain_buy,
+            'missing_conditions': missing_conditions,
+            'notes': ' | '.join(notes)
+        }
+
     def detect_signals(self, symbol):
         """Detect all possible signals for a symbol"""
         signals = []
