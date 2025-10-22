@@ -248,9 +248,9 @@ function updateUIFromConfig() {
 function updateMarketData(data) {
     // Update tick data
     if (data.tick) {
-        document.getElementById('bidPrice').textContent = data.tick.bid.toFixed(4);
-        document.getElementById('askPrice').textContent = data.tick.ask.toFixed(4);
-        document.getElementById('spread').textContent = data.tick.spread.toFixed(4);
+        document.getElementById('bidPrice').textContent = data.tick.bid.toFixed(2);
+        document.getElementById('askPrice').textContent = data.tick.ask.toFixed(2);
+        document.getElementById('spread').textContent = data.tick.spread.toFixed(2);
 
         // Add updating animation
         ['bidPrice', 'askPrice', 'spread'].forEach(id => {

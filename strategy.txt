@@ -1,0 +1,179 @@
+TRADING BOT STRATEGY SPECIFICATION
+=====================================
+
+PROJECT OVERVIEW
+----------------
+Fully automated trading bot for MetaTrader 5 that identifies perfect trading moments for PainX and GainX indices (400, 600, 800, 999).
+
+KEY OBJECTIVES
+--------------
+1. Monitor market conditions every 2 seconds
+2. Identify perfect trading moments based on multi-timeframe analysis
+3. Mark opportunities on dashboard chart
+4. Record all trading signals to CSV files (separate file per hour)
+5. Store all output in Report folder
+
+TRADING PARAMETERS
+------------------
+- Broker: Weltrade
+- Lot Size: 0.10
+- Trading Hours: 7:00 PM - 6:00 AM Colombia Time
+- Trade Target: USD 1.5-2 per trade
+- Daily Target: USD 100
+- Daily Stop Loss: USD 40
+- Max Concurrent Orders: 3
+- Max Spread: ~2 pips
+- Max Slippage: 2 pips
+- Daily Close: 4:00 PM Colombia Time
+
+INDICATORS
+----------
+- Snake (EMA 100): Primary trend indicator
+  * GREEN: When EMA < Current Price (bullish)
+  * RED: When EMA > Current Price (bearish)
+- Purple Line (EMA 10): Entry signal indicator
+- Fibonacci Retracement: Target levels (50% retrace)
+
+===========================================
+SELL STRATEGY (PainX & GainX)
+===========================================
+
+PAIN SELL CONDITIONS
+--------------------
+Daily Setup (D1 @ 4:00 PM COL):
+  1. Previous day candle must have small body with DOWNWARD wick
+  2. Use longest wick as guide
+  3. Stop trading when current day fills 50% of previous day's wick
+
+Multi-Timeframe Confirmation:
+  H4: Previous candle must cover at least 50% of Fibonacci retrace (from high to low on M15)
+  H1: Price must be BELOW red Snake
+  M30: Snake must be RED
+  M15: Snake must be RED
+
+Entry Signal (M1):
+  1. Price BELOW Red Snake
+  2. Price BREAKS Purple Line downward
+  3. Price RETURNS and TOUCHES Purple Line (double confirmation)
+  → ENTER SELL
+
+GAIN SELL CONDITIONS
+--------------------
+Daily Setup (D1 @ 4:00 PM COL):
+  1. Previous day candle must have small body with DOWNWARD wick
+  2. Stop trading when current day fills 50% of previous day's wick
+
+Multi-Timeframe Confirmation:
+  M30: Price must completely BREAK thick Snake (Snake turns RED)
+  M5: Wait for price retreat to Purple Line, then touch/break it
+  M1: Price touching Red Snake OR Purple Line, aligned with M5
+
+Entry Signal (M1):
+  → ENTER SELL when M1 and M5 aligned
+
+Exit Conditions (SELL):
+  - Hold for 5 minutes, close after M5 candle closes
+  - Wait 1 more M5 candle
+  - Can open next order at start of 3rd M5 candle IF price still below Purple Line
+  - Stop Loss: Price breaks Purple Line on M5
+
+===========================================
+BUY STRATEGY (PainX & GainX)
+===========================================
+
+PAIN BUY CONDITIONS
+-------------------
+Daily Setup (D1 @ 4:00 PM COL):
+  1. Previous day candle must have small body with UPWARD wick
+  2. Use longest wick as guide
+
+Multi-Timeframe Confirmation:
+  M30: Price must completely BREAK thick Snake (Snake turns GREEN)
+  M5: Wait for price retreat to Purple Line, then touch/break it
+  M1: Price touching Green Snake OR Purple Line, aligned with M5
+
+Entry Signal (M1):
+  → ENTER BUY when M1 and M5 aligned
+
+GAIN BUY CONDITIONS
+-------------------
+Daily Setup (D1 @ 4:00 PM COL):
+  1. Previous day candle must have small body with UPWARD wick
+
+Multi-Timeframe Confirmation:
+  H4: Previous candle must cover at least 50% of Fibonacci retrace (from low to high on M15)
+  H1: Price must be ABOVE green Snake
+  M30: Snake must be GREEN
+  M15: Snake must be GREEN
+
+Entry Signal (M1):
+  1. Price ABOVE Green Snake
+  2. Price BREAKS Purple Line upward
+  3. Price RETURNS and TOUCHES Purple Line (double confirmation)
+  → ENTER BUY
+
+Exit Conditions (BUY):
+  - Hold for 5 minutes, close after M5 candle closes
+  - Wait 1 more M5 candle
+  - Can open next order at start of 3rd M5 candle IF price still above Purple Line
+  - Stop Loss: Price breaks Purple Line on M5
+
+===========================================
+SIGNAL DETECTION & RECORDING
+===========================================
+
+Every 2 Seconds Check:
+  1. Evaluate all timeframes (D1, H4, H1, M30, M15, M5, M1)
+  2. Check all conditions for current symbol
+  3. Calculate Snake colors (red/green based on price)
+  4. Detect Purple Line breakouts and touchbacks
+  5. Identify perfect trading moments
+
+When Perfect Moment Detected:
+  1. Mark on dashboard chart with visual indicator
+  2. Add to list box below chart with:
+     - Timestamp
+     - Symbol
+     - Signal Type (BUY/SELL)
+     - Reason/Conditions Met
+     - Current Price
+     - Snake Color
+     - Purple Line Position
+  3. Save to CSV file:
+     - Create separate file per hour (e.g., report_2024-01-15_19.csv)
+     - Store in Report/ folder
+     - Include all signal details + multi-timeframe snapshot
+
+CSV File Format:
+  Timestamp, Symbol, SignalType, Price, SnakeColor, PurpleLine, D1_Condition, H4_Condition, H1_Condition, M30_Snake, M15_Snake, M5_Status, M1_Status, Reason
+
+File Management:
+  - Create new CSV file every hour
+  - File naming: report_YYYY-MM-DD_HH.csv
+  - Store in Report/ folder
+  - Keep all historical files for backtesting
+
+===========================================
+IMPLEMENTATION PRIORITY
+===========================================
+
+Phase 1: Signal Detection System
+  - Multi-timeframe data collection
+  - Snake and Purple Line calculations
+  - Condition checking logic
+  - Signal identification algorithm
+
+Phase 2: Dashboard Visualization
+  - Chart markers for signals
+  - List box for recent signals
+  - Real-time updates every 2 seconds
+
+Phase 3: CSV Recording System
+  - Hourly file creation
+  - Signal data formatting
+  - File management in Report folder
+
+Phase 4: Backtesting & Validation
+  - Historical data replay
+  - Performance metrics
+  - Strategy refinement
