@@ -178,7 +178,6 @@ function updateUIFromConfig() {
         timeframeSelect.innerHTML = '';
 
         const timeframeLabels = {
-            'S2': 'S2 (2 Seconds)',
             'M1': 'M1 (1 Minute)',
             'M5': 'M5 (5 Minutes)',
             'M15': 'M15 (15 Minutes)',

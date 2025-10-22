@@ -115,7 +115,6 @@ class MT5Connector:
 
         # Map timeframe string to MT5 constant
         timeframe_map = {
-            'S2': mt5.TIMEFRAME_M1,  # Use M1 bars for S2, but update every 2 seconds
             'M1': mt5.TIMEFRAME_M1,
             'M5': mt5.TIMEFRAME_M5,
             'M15': mt5.TIMEFRAME_M15,

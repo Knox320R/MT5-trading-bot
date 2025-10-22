@@ -52,7 +52,6 @@
     "default_symbol": "PainX 400",
     "default_timeframe": "M1",
     "timeframes": [
-      "S2",
       "M1",
       "M5",
       "M15",
