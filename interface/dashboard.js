@@ -6,6 +6,10 @@ let currentPort = 8765;
 const portsToTry = [8765, 8766, 8767, 8768, 8769];
 let serverConfig = null; // Will be loaded from server
 
+// Chart configuration
+const CHART_POINT_RADIUS = 1.3;  // Global point radius for all curves
+const CHART_POINT_HOVER_RADIUS = 5;  // Point radius on hover
+
 // Initialize Chart.js
 function initializeChart() {
     const ctx = document.getElementById('priceChart').getContext('2d');
@@ -20,23 +24,31 @@ function initializeChart() {
                     borderColor: '#00d4ff',
                     backgroundColor: 'rgba(0, 212, 255, 0.1)',
                     borderWidth: 2,
-                    tension: 0.1
+                    tension: 0.1,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 },
                 {
                     label: 'High',
                     data: [],
-                    borderColor: '#00ff00',
+                    borderColor: '#ffe100',
                     borderWidth: 1,
                     borderDash: [5, 5],
-                    fill: false
+                    fill: false,
+                    hidden: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 },
                 {
                     label: 'Low',
                     data: [],
-                    borderColor: '#ff0000',
+                    borderColor: '#00bbff',
                     borderWidth: 1,
                     borderDash: [5, 5],
-                    fill: false
+                    fill: false,
+                    hidden: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 },
                 {
                     label: 'Snake (EMA 100)',
@@ -44,7 +56,12 @@ function initializeChart() {
                     borderColor: '#ffaa00',
                     borderWidth: 2,
                     tension: 0.4,
-                    fill: false
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    pointBackgroundColor: [],
+                    pointBorderColor: [],
+                    segment: {}
                 },
                 {
                     label: 'Purple Line (EMA 10)',
@@ -52,7 +69,9 @@ function initializeChart() {
                     borderColor: '#9900ff',
                     borderWidth: 2,
                     tension: 0.4,
-                    fill: false
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 }
             ]
         },
@@ -288,6 +307,34 @@ function calculateEMA(data, period) {
     return ema;
 }
 
+// Get Snake color segments based on price comparison
+function getSnakeColorSegments(closePrices, snakeValues) {
+    const segments = [];
+    let currentColor = null;
+    let currentSegment = [];
+
+    for (let i = 0; i < closePrices.length; i++) {
+        // Green when snake is below price, Red when above price
+        const color = snakeValues[i] < closePrices[i] ? '#00ff00' : '#ff0000';
+
+        if (color !== currentColor) {
+            if (currentSegment.length > 0) {
+                segments.push({ color: currentColor, data: currentSegment });
+            }
+            currentColor = color;
+            currentSegment = [snakeValues[i]];
+        } else {
+            currentSegment.push(snakeValues[i]);
+        }
+    }
+
+    if (currentSegment.length > 0) {
+        segments.push({ color: currentColor, data: currentSegment });
+    }
+
+    return segments;
+}
+
 // Update chart with candlestick data
 function updateChart(bars, symbol, timeframe) {
     document.getElementById('chartSymbol').textContent = symbol;
@@ -303,6 +350,12 @@ function updateChart(bars, symbol, timeframe) {
     const snake = calculateEMA(closePrices, 100);  // Snake: EMA 100
     const purpleLine = calculateEMA(closePrices, 10);  // Purple Line: EMA 10
 
+    // Create color array for each Snake point
+    const snakeColors = snake.map((value, index) => {
+        // Green when snake is below price, Red when above price
+        return value < closePrices[index] ? '#00ff00' : '#ff0000';
+    });
+
     // Update labels
     chart.data.labels = labels;
 
@@ -311,6 +364,15 @@ function updateChart(bars, symbol, timeframe) {
     chart.data.datasets[1].data = highPrices;
     chart.data.datasets[2].data = lowPrices;
     chart.data.datasets[3].data = snake;
+    chart.data.datasets[3].segment = {
+        borderColor: (ctx) => {
+            // Color each segment based on the point colors
+            const index = ctx.p0DataIndex;
+            return snakeColors[index];
+        }
+    };
+    chart.data.datasets[3].pointBackgroundColor = snakeColors;  // Point (node) colors
+    chart.data.datasets[3].pointBorderColor = snakeColors;  // Point border colors
     chart.data.datasets[4].data = purpleLine;
 
     // Update without animation
@@ -376,6 +438,18 @@ function setupEventListeners() {
                 timeframe: e.target.value
             }));
         }
+    });
+
+    // Handle Show High checkbox
+    document.getElementById('showHighCheckbox').addEventListener('change', (e) => {
+        chart.data.datasets[1].hidden = !e.target.checked;
+        chart.update('none');
+    });
+
+    // Handle Show Low checkbox
+    document.getElementById('showLowCheckbox').addEventListener('change', (e) => {
+        chart.data.datasets[2].hidden = !e.target.checked;
+        chart.update('none');
     });
 }
 
