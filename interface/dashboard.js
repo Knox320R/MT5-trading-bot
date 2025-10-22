@@ -5,10 +5,12 @@ let reconnectInterval = null;
 let currentPort = 8765;
 const portsToTry = [8765, 8766, 8767, 8768, 8769];
 let serverConfig = null; // Will be loaded from server
+let signals = []; // Store signals
+let maxSignals = 20; // Maximum number of signals to display
 
 // Chart configuration
-const CHART_POINT_RADIUS = 1.3;  // Global point radius for all curves
-const CHART_POINT_HOVER_RADIUS = 5;  // Point radius on hover
+const CHART_POINT_RADIUS = 1;  // Global point radius for all curves
+const CHART_POINT_HOVER_RADIUS = 3;  // Point radius on hover
 
 // Initialize Chart.js
 function initializeChart() {
@@ -179,6 +181,10 @@ function handleServerMessage(data) {
         serverConfig = data.data;
         console.log('Received config from server:', serverConfig);
         updateUIFromConfig();
+    } else if (data.type === 'trading_signal') {
+        // Received trading signal
+        console.log('Received trading signal:', data.signal);
+        addSignal(data.signal);
     }
 }
 
@@ -418,6 +424,63 @@ function showError(message) {
     }
 }
 
+// Add signal to list
+function addSignal(signal) {
+    // Add to beginning of array
+    signals.unshift(signal);
+
+    // Keep only last N signals
+    if (signals.length > maxSignals) {
+        signals.pop();
+    }
+
+    // Update display
+    updateSignalsList();
+}
+
+// Update signals list display
+function updateSignalsList() {
+    const container = document.getElementById('signalsListBox');
+
+    if (signals.length === 0) {
+        container.innerHTML = '<div class="no-data">Waiting for signals...</div>';
+        return;
+    }
+
+    let html = '';
+    signals.forEach(signal => {
+        const signalType = signal.type.includes('BUY') ? 'buy' : 'sell';
+        const timestamp = new Date(signal.timestamp).toLocaleString();
+
+        html += `
+            <div class="signal-item ${signalType}">
+                <div class="signal-header">
+                    <div class="signal-type ${signalType}">${signal.type.replace('_', ' ')}</div>
+                    <div class="signal-time">${timestamp}</div>
+                </div>
+                <div class="signal-symbol">${signal.symbol}</div>
+                <div class="signal-price">
+                    <span class="signal-price-label">Price:</span> ${signal.price ? signal.price.toFixed(5) : '--'}
+                </div>
+                <div class="signal-conditions">
+                    ${signal.reasons.map(reason => `<div class="signal-condition met">${reason}</div>`).join('')}
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+
+    // Auto-scroll to top (newest signal)
+    container.scrollTop = 0;
+}
+
+// Clear all signals
+function clearSignals() {
+    signals = [];
+    updateSignalsList();
+}
+
 // Event listeners
 function setupEventListeners() {
     // Handle symbol change
@@ -438,6 +501,11 @@ function setupEventListeners() {
                 timeframe: e.target.value
             }));
         }
+    });
+
+    // Handle Clear Signals button
+    document.getElementById('clearSignalsBtn').addEventListener('click', () => {
+        clearSignals();
     });
 }
 

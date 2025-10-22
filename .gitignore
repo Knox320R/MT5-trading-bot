@@ -21,6 +21,7 @@ documents/
 .vscode/
 .idea/
 .claude/
+*.txt
 
 # Archives
 *.rar

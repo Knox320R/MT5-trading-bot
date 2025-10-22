@@ -7,6 +7,8 @@ import numpy as np
 from datetime import datetime
 from .mt5_connector import MT5Connector
 from .config_loader import config
+from .signal_detector import SignalDetector
+from .csv_recorder import CSVRecorder
 
 # Set Windows-specific event loop policy
 if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
@@ -20,6 +22,8 @@ class RealtimeDataServer:
         self.current_symbol = config.get_default_symbol()
         self.timeframe = config.get_default_timeframe()
         self.update_interval = config.get_update_interval()
+        self.signal_detector = SignalDetector(self.connector)
+        self.csv_recorder = CSVRecorder()
 
     async def register_client(self, websocket):
         """Register a new WebSocket client"""
@@ -151,6 +155,51 @@ class RealtimeDataServer:
             except Exception as e:
                 print(f"Error unregistering client: {e}")
 
+    async def detect_signals_loop(self):
+        """Detect trading signals for all symbols every 2 seconds"""
+        print("Starting signal detection loop...")
+        print(f"Checking symbols: {config.get_all_symbols()}")
+        print()
+
+        iteration = 0
+        while self.running:
+            iteration += 1
+            try:
+                # Get all symbols to check
+                all_symbols = config.get_all_symbols()
+
+                for symbol in all_symbols:
+                    # Detect signals for this symbol
+                    signals = self.signal_detector.detect_signals(symbol)
+
+                    # Process each detected signal
+                    for signal in signals:
+                        if signal['met']:
+                            # Print signal notification
+                            print(f"🎯 SIGNAL DETECTED: {signal['type']} {signal['symbol']} @ {signal['price']:.5f}")
+
+                            # Record to CSV
+                            self.csv_recorder.record_signal(signal)
+
+                            # Broadcast to all connected clients
+                            await self.send_data_to_clients({
+                                'type': 'trading_signal',
+                                'signal': signal
+                            })
+
+                # Print progress every 30 iterations (every 60 seconds)
+                if iteration % 30 == 1:
+                    print(f"[{iteration}] Signal detection running - checking {len(all_symbols)} symbols")
+
+                # Wait 2 seconds before next detection cycle
+                await asyncio.sleep(2)
+
+            except Exception as e:
+                print(f"✗ Error in signal detection loop: {e}")
+                import traceback
+                traceback.print_exc()
+                await asyncio.sleep(5)
+
     async def stream_market_data(self):
         """Stream market data to connected clients"""
         # Connect using config credentials
@@ -188,7 +237,7 @@ class RealtimeDataServer:
                 symbol_info = self.connector.get_symbol_info(self.current_symbol)
 
                 if tick and bars:
-                    # Print update every 10 iterations (every 10 seconds)
+                    # Print update every 10 iterations (every 20 seconds with 2s interval)
                     if iteration % 10 == 1:
                         print(f"[{iteration}] Streaming data - Bid: {tick['bid']}, Clients: {len(self.clients)}")
 
@@ -223,7 +272,9 @@ class RealtimeDataServer:
                 traceback.print_exc()
                 await asyncio.sleep(5)
 
+        # Cleanup
         self.connector.disconnect()
+        self.csv_recorder.close()
 
     async def start(self, host=None, port=None, open_browser=None):
         """Start the WebSocket server"""
@@ -280,6 +331,9 @@ class RealtimeDataServer:
 
         # Start market data streaming in background
         asyncio.create_task(self.stream_market_data())
+
+        # Start signal detection loop in background
+        asyncio.create_task(self.detect_signals_loop())
 
         # Keep server running
         await asyncio.Future()  # Run forever
