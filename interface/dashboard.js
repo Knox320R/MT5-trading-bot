@@ -13,14 +13,49 @@ function initializeChart() {
         type: 'line',
         data: {
             labels: [],
-            datasets: [{
-                label: 'Price',
-                data: []
-            }]
+            datasets: [
+                {
+                    label: 'Close',
+                    data: [],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1
+                },
+                {
+                    label: 'High',
+                    data: [],
+                    borderColor: '#00ff00',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    fill: false
+                },
+                {
+                    label: 'Low',
+                    data: [],
+                    borderColor: '#ff0000',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    fill: false
+                }
+            ]
         },
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            animation: false, // Disable all animations
+            animations: {
+                tension: {
+                    duration: 0
+                }
+            },
+            transitions: {
+                active: {
+                    animation: {
+                        duration: 0
+                    }
+                }
+            },
             scales: {
                 x: {
                     grid: {
@@ -186,7 +221,7 @@ function updateMarketData(data) {
         ['bidPrice', 'askPrice', 'spread'].forEach(id => {
             const el = document.getElementById(id);
             el.classList.add('updating');
-            setTimeout(() => el.classList.remove('updating'), 300);
+            setTimeout(() => el.classList.remove('updating'), 2000);
         });
     }
 
@@ -219,41 +254,22 @@ function updateChart(bars, symbol, timeframe) {
     document.getElementById('chartSymbol').textContent = symbol;
     document.getElementById('chartTimeframe').textContent = timeframe;
 
-    // Since Chart.js doesn't have built-in candlestick, we'll use a line chart
+    // Extract data from bars
     const labels = bars.map(bar => bar.time);
     const closePrices = bars.map(bar => bar.close);
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
+    // Update labels
     chart.data.labels = labels;
-    chart.data.datasets = [
-        {
-            label: 'Close',
-            data: closePrices,
-            borderColor: '#00d4ff',
-            backgroundColor: 'rgba(0, 212, 255, 0.1)',
-            borderWidth: 2,
-            tension: 0.1
-        },
-        {
-            label: 'High',
-            data: highPrices,
-            borderColor: '#00ff00',
-            borderWidth: 1,
-            borderDash: [5, 5],
-            fill: false
-        },
-        {
-            label: 'Low',
-            data: lowPrices,
-            borderColor: '#ff0000',
-            borderWidth: 1,
-            borderDash: [5, 5],
-            fill: false
-        }
-    ];
 
-    chart.update();
+    // Update only the data arrays, not the entire dataset objects
+    chart.data.datasets[0].data = closePrices;
+    chart.data.datasets[1].data = highPrices;
+    chart.data.datasets[2].data = lowPrices;
+
+    // Update without animation
+    chart.update('none');
 }
 
 // Update positions table

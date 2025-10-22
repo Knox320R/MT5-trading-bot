@@ -3,6 +3,7 @@ import websockets
 import json
 import webbrowser
 import os
+import numpy as np
 from datetime import datetime
 from .mt5_connector import MT5Connector
 from .config_loader import config
@@ -53,10 +54,27 @@ class RealtimeDataServer:
         self.clients.remove(websocket)
         print(f"Client disconnected. Total clients: {len(self.clients)}")
 
+    def convert_to_json_serializable(self, obj):
+        """Convert numpy types to native Python types for JSON serialization"""
+        if isinstance(obj, dict):
+            return {key: self.convert_to_json_serializable(value) for key, value in obj.items()}
+        elif isinstance(obj, list):
+            return [self.convert_to_json_serializable(item) for item in obj]
+        elif isinstance(obj, (np.integer, np.int64, np.uint64)):
+            return int(obj)
+        elif isinstance(obj, (np.floating, np.float64)):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        else:
+            return obj
+
     async def send_data_to_clients(self, data):
         """Send data to all connected clients"""
         if self.clients:
-            message = json.dumps(data)
+            # Convert numpy types to native Python types
+            serializable_data = self.convert_to_json_serializable(data)
+            message = json.dumps(serializable_data)
             await asyncio.gather(
                 *[client.send(message) for client in self.clients],
                 return_exceptions=True

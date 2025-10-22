@@ -134,7 +134,7 @@
     "ports": [8765, 8766, 8767, 8768, 8769],
     "auto_open_browser": true,
     "preferred_browser": "chrome",
-    "update_interval_seconds": 1,
+    "update_interval_seconds": 2,
     "reconnect_interval_seconds": 3,
     "max_reconnect_attempts": 10
   },
