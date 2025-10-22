@@ -3,7 +3,7 @@ echo Starting MT5 Real-Time Dashboard...
 echo.
 
 REM Get the full path to the HTML file
-set "HTML_FILE=%~dp0realtime_dashboard.html"
+set "HTML_FILE=%~dp0interface\index.html"
 
 REM Open the dashboard in default browser
 echo Opening dashboard in browser...

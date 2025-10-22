@@ -1,8 +1,39 @@
-# MT5 Real-Time Trading Dashboard
+# MT5 Real-Time Trading Bot
 
-This dashboard connects to your MetaTrader 5 account and displays real-time trading data for PainX and GainX symbols.
+A professional automated trading bot for MetaTrader 5 with real-time dashboard visualization.
 
-## Setup Instructions
+## Features
+
+- ✅ **Real-time MT5 data streaming** (updates every 1 second)
+- ✅ **Beautiful web dashboard** with live charts
+- ✅ **Centralized configuration** via JSON
+- ✅ **Multi-symbol support** (PainX/GainX 400/600/800/999)
+- ✅ **Multiple timeframe analysis** (M1, M5, M15, M30, H1, H4, D1)
+- ✅ **Account monitoring** (Balance, Equity, Profit/Loss)
+- ✅ **Position tracking** with real-time P&L
+- ✅ **Auto-reconnect** on disconnection
+- ✅ **Demo and Live account support**
+
+## Project Structure
+
+```
+trading-bot/
+├── bot.py                  # Main entry point - START HERE
+├── config.json             # Centralized configuration file
+├── core/                   # Core modules
+│   ├── config_loader.py    # Configuration management
+│   ├── mt5_connector.py    # MT5 connection and data fetching
+│   └── realtime_server.py  # WebSocket server for dashboard
+├── interface/              # Web dashboard
+│   ├── index.html          # Dashboard HTML
+│   ├── style.css           # Dashboard styles
+│   └── dashboard.js        # Dashboard JavaScript
+├── utils/                  # Utility scripts
+│   └── diagnose.py         # Diagnostic tool
+└── TROUBLESHOOTING.md      # Troubleshooting guide
+```
+
+## Quick Start
 
 ### 1. Install Dependencies
 
@@ -10,79 +41,48 @@ This dashboard connects to your MetaTrader 5 account and displays real-time trad
 pip install -r requirements.txt
 ```
 
-### 2. Test MT5 Connection
-
-First, make sure MetaTrader 5 is installed and you can login to your demo account.
-
-Test the connection:
+### 2. Start the Bot
 
 ```bash
-python mt5_connector.py
+python bot.py
 ```
 
-This will connect to the demo account and show available symbols.
+The bot will:
+- Connect to your MT5 account
+- Start the WebSocket server
+- Open the dashboard in your browser automatically
+- Begin streaming real-time data
 
-### 3. Start the Real-Time Server
+## Command Line Options
 
 ```bash
-python realtime_server.py
+python bot.py                  # Start normally
+python bot.py --no-browser     # Don't open browser
+python bot.py --port 8766      # Use specific port
+python bot.py --test-connection # Test MT5 connection only
+python bot.py --help           # Show all options
 ```
 
-The server will:
-- Connect to your MT5 demo account
-- Start streaming real-time data
-- Run a WebSocket server on `ws://localhost:8765`
+## Configuration
 
-### 4. Open the Dashboard
+All settings are in `config.json`:
 
-Simply open `realtime_dashboard.html` in your web browser (Chrome, Firefox, or Edge).
-
-The dashboard will automatically connect to the server and start displaying:
-- Real-time bid/ask prices
-- Live price charts
-- Account balance and equity
-- Current profit/loss
-- Open positions
-
-## Features
-
-- **Real-Time Price Updates**: See live bid/ask prices updating every second
-- **Interactive Charts**: View historical candlestick data for any timeframe
-- **Symbol Switching**: Choose between PainX400/600/800/999 and GainX400/600/800/999
-- **Timeframe Selection**: View data in M1, M5, M15, M30, H1, H4, or D1
-- **Account Monitoring**: Track your balance, equity, and profit in real-time
-- **Position Tracking**: See all open positions with their current profit/loss
-
-## Usage
-
-1. Select a symbol from the dropdown (e.g., PainX400)
-2. Select a timeframe (e.g., M1 for 1-minute candles)
-3. Watch the data update in real-time
-
-The dashboard will automatically reconnect if the connection is lost.
+- **Environment**: Demo/Live mode
+- **MT5 Account**: Credentials and server
+- **Trading**: Symbols, timeframes, lot sizes
+- **Server**: Ports, update interval (default: 1 second)
+- **Risk Management**: Daily stops, targets
+- **Strategy**: Pain/Gain trading parameters
 
 ## Troubleshooting
 
-### "Symbol not found" error
+Run diagnostic tool:
+```bash
+python utils/diagnose.py
+```
 
-If you see this error, the symbol might not be available on your broker. Try:
-1. Opening MetaTrader 5
-2. Going to View → Market Watch
-3. Right-click → Show All
-4. Search for the symbol (PainX400, GainX400, etc.)
-5. If not found, check with your broker about symbol names
+Or see [TROUBLESHOOTING.md](TROUBLESHOOTING.md) for detailed help.
 
-### Connection fails
+---
 
-Make sure:
-1. MetaTrader 5 is installed
-2. The account credentials in `realtime_server.py` are correct
-3. No firewall is blocking the WebSocket connection
-4. The MT5 terminal is closed (the Python script will connect directly)
-
-## Files
-
-- `mt5_connector.py` - MT5 connection and data fetching
-- `realtime_server.py` - WebSocket server for streaming data
-- `realtime_dashboard.html` - Web-based dashboard UI
-- `requirements.txt` - Python dependencies
+**⚠️ Trading Warning**: Automated trading involves risk. Test in demo mode first.

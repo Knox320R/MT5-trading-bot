@@ -1,8 +1,7 @@
 import MetaTrader5 as mt5
 from datetime import datetime
-import time
 import json
-from config_loader import config
+from .config_loader import config
 
 class MT5Connector:
     def __init__(self, use_config=True):

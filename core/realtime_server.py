@@ -1,13 +1,11 @@
 import asyncio
 import websockets
 import json
-import threading
-import time
 import webbrowser
 import os
-from mt5_connector import MT5Connector
-from config_loader import config
 from datetime import datetime
+from .mt5_connector import MT5Connector
+from .config_loader import config
 
 # Set Windows-specific event loop policy
 if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
