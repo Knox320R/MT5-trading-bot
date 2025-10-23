@@ -41,9 +41,12 @@ class SignalDetector:
                 high_prices = [bar['high'] for bar in bars]
                 low_prices = [bar['low'] for bar in bars]
 
-                # Calculate indicators
-                snake = self.calculate_ema(close_prices, 100)
-                purple_line = self.calculate_ema(close_prices, 10)
+                # Calculate indicators from config
+                snake_period = config.get_snake_period()
+                purple_period = config.get_purple_line_period()
+
+                snake = self.calculate_ema(close_prices, snake_period)
+                purple_line = self.calculate_ema(close_prices, purple_period)
 
                 data[tf] = {
                     'bars': bars,

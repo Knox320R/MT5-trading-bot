@@ -90,21 +90,20 @@
   },
   "indicators": {
     "snake": {
-      "period": 100,
-      "type": "EMA"
-    },
-    "shingle": {
-      "period": 100,
-      "type": "EMA"
+      "period": 50,
+      "type": "EMA",
+      "description": "Primary trend indicator - EMA 100"
     },
     "purple_line": {
-      "period": 50,
-      "type": "SMA"
+      "period": 10,
+      "type": "EMA",
+      "description": "Entry signal indicator - EMA 10"
     },
     "rsi": {
       "period": 14,
       "overbought": 90,
-      "oversold": 10
+      "oversold": 10,
+      "enabled": false
     }
   },
   "risk_management": {

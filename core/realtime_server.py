@@ -42,7 +42,13 @@ class RealtimeDataServer:
                     'default_symbol': config.get_default_symbol(),
                     'default_timeframe': config.get_default_timeframe(),
                     'dashboard_title': config.get_dashboard_title(),
-                    'environment': config.get_environment_mode()
+                    'environment': config.get_environment_mode(),
+                    'indicators': {
+                        'snake_period': config.get_snake_period(),
+                        'snake_type': config.get_snake_type(),
+                        'purple_line_period': config.get_purple_line_period(),
+                        'purple_line_type': config.get_purple_line_type()
+                    }
                 }
             }
             print(f"  Sending initial config...")

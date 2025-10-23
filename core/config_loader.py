@@ -206,6 +206,27 @@ class Config:
         """Get log directory path"""
         return self.get('logging', 'log_directory', default='logs')
 
+    # Indicator settings
+    def get_snake_period(self) -> int:
+        """Get Snake (EMA) period"""
+        return self.get('indicators', 'snake', 'period', default=100)
+
+    def get_snake_type(self) -> str:
+        """Get Snake indicator type"""
+        return self.get('indicators', 'snake', 'type', default='EMA')
+
+    def get_purple_line_period(self) -> int:
+        """Get Purple Line (EMA) period"""
+        return self.get('indicators', 'purple_line', 'period', default=10)
+
+    def get_purple_line_type(self) -> str:
+        """Get Purple Line indicator type"""
+        return self.get('indicators', 'purple_line', 'type', default='EMA')
+
+    def get_rsi_period(self) -> int:
+        """Get RSI period"""
+        return self.get('indicators', 'rsi', 'period', default=14)
+
     # Dashboard settings
     def get_dashboard_title(self) -> str:
         """Get dashboard title"""

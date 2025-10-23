@@ -352,9 +352,11 @@ function updateChart(bars, symbol, timeframe) {
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
-    // Calculate EMAs
-    const snake = calculateEMA(closePrices, 100);  // Snake: EMA 100
-    const purpleLine = calculateEMA(closePrices, 10);  // Purple Line: EMA 10
+    // Calculate EMAs from server config
+    const snakePeriod = serverConfig?.indicators?.snake_period || 100;
+    const purplePeriod = serverConfig?.indicators?.purple_line_period || 10;
+    const snake = calculateEMA(closePrices, snakePeriod);
+    const purpleLine = calculateEMA(closePrices, purplePeriod);
 
     // Create color array for each Snake point
     const snakeColors = snake.map((value, index) => {
