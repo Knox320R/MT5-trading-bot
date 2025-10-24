@@ -127,31 +127,58 @@ class RealtimeDataServer:
                     }))
 
             elif command == 'get_historical_data':
-                # Fetch historical data for specified date/time range
+                # Fetch exact number of historical bars ending at specified time
                 symbol = data.get('symbol', self.current_symbol)
                 timeframe = data.get('timeframe', 'M1')
-                date_from = data.get('date_from')
                 date_to = data.get('date_to')
+                bars_count = data.get('bars_count', 100)
 
-                print(f"Historical data request: {symbol} {timeframe} from {date_from} to {date_to}")
+                print(f"Historical data request: {symbol} {timeframe} - {bars_count} bars ending at {date_to}")
 
                 try:
-                    # Parse datetime strings
+                    # Parse datetime string
                     from datetime import datetime
-                    dt_from = datetime.fromisoformat(date_from)
                     dt_to = datetime.fromisoformat(date_to)
 
-                    # Fetch historical bars
-                    bars = self.connector.get_bars_range(symbol, timeframe, dt_from, dt_to)
+                    # Fetch exact number of bars using MT5's copy_rates_from
+                    # This is much faster than fetching a range and filtering
+                    import MetaTrader5 as mt5
 
-                    if bars:
+                    timeframe_map = {
+                        'M1': mt5.TIMEFRAME_M1,
+                        'M5': mt5.TIMEFRAME_M5,
+                        'M15': mt5.TIMEFRAME_M15,
+                        'M30': mt5.TIMEFRAME_M30,
+                        'H1': mt5.TIMEFRAME_H1,
+                        'H4': mt5.TIMEFRAME_H4,
+                        'D1': mt5.TIMEFRAME_D1
+                    }
+
+                    tf = timeframe_map.get(timeframe, mt5.TIMEFRAME_M1)
+                    rates = mt5.copy_rates_from(symbol, tf, dt_to, bars_count)
+
+                    if rates is not None and len(rates) > 0:
+                        # Convert to bars format
+                        bars = []
+                        for rate in rates:
+                            bars.append({
+                                'time': datetime.fromtimestamp(rate['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                                'open': float(rate['open']),
+                                'high': float(rate['high']),
+                                'low': float(rate['low']),
+                                'close': float(rate['close']),
+                                'tick_volume': int(rate['tick_volume']),
+                                'spread': int(rate['spread']),
+                                'real_volume': int(rate['real_volume'])
+                            })
+
                         await websocket.send(json.dumps({
                             'type': 'historical_data',
                             'symbol': symbol,
                             'timeframe': timeframe,
-                            'date_from': date_from,
+                            'date_from': bars[0]['time'] if bars else '',
                             'date_to': date_to,
-                            'bars': self.convert_to_json_serializable(bars),
+                            'bars': bars,
                             'bars_count': len(bars)
                         }))
                         print(f"  ✓ Sent {len(bars)} historical bars")

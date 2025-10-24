@@ -300,6 +300,10 @@ select:hover, input:hover {
     color: #ffe100;
 }
 
+#historicalChart {
+    max-height: 500px;
+}
+
 /* Signals List Box Styles */
 .signals-container {
     background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);

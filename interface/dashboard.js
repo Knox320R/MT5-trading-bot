@@ -6,6 +6,8 @@ let reconnectInterval = null;
 let currentPort = 8765;
 const portsToTry = [8765, 8766, 8767, 8768, 8769];
 let serverConfig = null; // Will be loaded from server
+let currentSymbol = null; // Track current symbol
+let currentTimeframe = null; // Track current timeframe
 let signals = []; // Store signals
 let maxSignals = 20; // Maximum number of signals to display
 
@@ -196,6 +198,10 @@ function handleServerMessage(data) {
 // Update UI elements based on config
 function updateUIFromConfig() {
     if (!serverConfig) return;
+
+    // Set current symbol and timeframe from config
+    currentSymbol = serverConfig.default_symbol;
+    currentTimeframe = serverConfig.default_timeframe;
 
     // Update page title
     if (serverConfig.dashboard_title) {
@@ -492,6 +498,7 @@ function clearSignals() {
 function setupEventListeners() {
     // Handle symbol change
     document.getElementById('symbolSelect').addEventListener('change', (e) => {
+        currentSymbol = e.target.value;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 command: 'set_symbol',
@@ -502,6 +509,7 @@ function setupEventListeners() {
 
     // Handle timeframe change
     document.getElementById('timeframeSelect').addEventListener('change', (e) => {
+        currentTimeframe = e.target.value;
         if (ws && ws.readyState === WebSocket.OPEN) {
             ws.send(JSON.stringify({
                 command: 'set_timeframe',
@@ -541,6 +549,7 @@ function initializeHistoricalChart() {
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
+                    hidden: false,
                     pointRadius: CHART_POINT_RADIUS,
                     pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 },
@@ -551,23 +560,29 @@ function initializeHistoricalChart() {
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
+                    hidden: false,
                     pointRadius: CHART_POINT_RADIUS,
                     pointHoverRadius: CHART_POINT_HOVER_RADIUS
                 },
                 {
-                    label: 'Snake',
+                    label: 'Snake (EMA 100)',
                     data: [],
-                    borderColor: '#00ff00',
+                    borderColor: '#ffaa00',
                     borderWidth: 2,
+                    tension: 0.4,
                     fill: false,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    pointBackgroundColor: [],
+                    pointBorderColor: [],
+                    segment: {}
                 },
                 {
-                    label: 'Purple Line',
+                    label: 'Purple Line (EMA 10)',
                     data: [],
                     borderColor: '#9900ff',
                     borderWidth: 2,
+                    tension: 0.4,
                     fill: false,
                     pointRadius: CHART_POINT_RADIUS,
                     pointHoverRadius: CHART_POINT_HOVER_RADIUS
@@ -578,21 +593,45 @@ function initializeHistoricalChart() {
             responsive: true,
             maintainAspectRatio: false,
             animation: false,
-            plugins: {
-                legend: {
-                    display: true,
-                    position: 'top',
-                    labels: { color: '#ffffff' }
+            animations: {
+                tension: {
+                    duration: 0
+                }
+            },
+            transitions: {
+                active: {
+                    animation: {
+                        duration: 0
+                    }
                 }
             },
             scales: {
                 x: {
-                    ticks: { color: '#ffffff', maxTicksLimit: 20 },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#00d4ff',
+                        maxRotation: 45,
+                        minRotation: 45
+                    }
                 },
                 y: {
-                    ticks: { color: '#ffffff' },
-                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                    grid: {
+                        color: 'rgba(255, 255, 255, 0.1)'
+                    },
+                    ticks: {
+                        color: '#00d4ff'
+                    }
+                }
+            },
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: {
+                        color: '#ffffff'
+                    }
                 }
             }
         }
@@ -602,7 +641,6 @@ function initializeHistoricalChart() {
 // Load Historical Data
 function loadHistoricalData() {
     const dateInput = document.getElementById('historicalDate').value;
-    const startTime = document.getElementById('historicalStartTime').value;
     const endTime = document.getElementById('historicalEndTime').value;
     const timeframe = document.getElementById('historicalTimeframe').value;
 
@@ -611,20 +649,49 @@ function loadHistoricalData() {
         return;
     }
 
-    // Build datetime strings
-    const dateFrom = `${dateInput}T${startTime}:00`;
+    // Calculate exact number of bars needed based on timeframe
+    // Fetch only what's needed to display on the chart
+    let barsToFetch;
+
+    switch(timeframe) {
+        case 'M1':
+            barsToFetch = 60;   // 1 hour of M1 bars
+            break;
+        case 'M5':
+            barsToFetch = 72;   // 6 hours of M5 bars
+            break;
+        case 'M15':
+            barsToFetch = 96;   // 1 day of M15 bars
+            break;
+        case 'M30':
+            barsToFetch = 48;   // 1 day of M30 bars
+            break;
+        case 'H1':
+            barsToFetch = 24;   // 1 day of H1 bars
+            break;
+        case 'H4':
+            barsToFetch = 42;   // 1 week of H4 bars
+            break;
+        case 'D1':
+            barsToFetch = 30;   // 1 month of D1 bars
+            break;
+        default:
+            barsToFetch = 100;
+    }
+
+    // Build end datetime from selected date and time
     const dateTo = `${dateInput}T${endTime}:59`;
 
-    console.log('Loading historical data:', dateFrom, 'to', dateTo, timeframe);
+    console.log('Loading historical data:', timeframe, `(${barsToFetch} bars ending at ${dateTo})`);
 
-    // Send request to server
+    // Send request to server - fetch exact number of bars backward from end time
     if (ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({
             command: 'get_historical_data',
             symbol: currentSymbol || serverConfig?.default_symbol || 'PainX 400',
             timeframe: timeframe,
-            date_from: dateFrom,
-            date_to: dateTo
+            date_to: dateTo,
+            bars_count: barsToFetch
         }));
 
         document.getElementById('historicalChartInfo').textContent = 'Loading...';
@@ -635,11 +702,21 @@ function loadHistoricalData() {
 
 // Update Historical Chart
 function updateHistoricalChart(data) {
+    console.log('=== UPDATE HISTORICAL CHART DEBUG ===');
+    console.log('1. Received data:', data);
+
     const bars = data.bars;
+    console.log('2. Bars array:', bars);
+    console.log('3. Bars count:', bars ? bars.length : 'NULL');
+
     if (!bars || bars.length === 0) {
+        console.log('ERROR: No bars data received!');
         document.getElementById('historicalChartInfo').textContent = 'No data available';
         return;
     }
+
+    console.log('4. First bar:', bars[0]);
+    console.log('5. Last bar:', bars[bars.length - 1]);
 
     // Extract data
     const labels = bars.map(bar => bar.time);
@@ -647,18 +724,28 @@ function updateHistoricalChart(data) {
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
+    console.log('6. Labels (first 3):', labels.slice(0, 3));
+    console.log('7. Close prices (first 3):', closePrices.slice(0, 3));
+    console.log('8. High prices (first 3):', highPrices.slice(0, 3));
+    console.log('9. Low prices (first 3):', lowPrices.slice(0, 3));
+
     // Calculate EMAs
     const snakePeriod = serverConfig?.indicators?.snake_period || 100;
     const purplePeriod = serverConfig?.indicators?.purple_line_period || 10;
+    console.log('10. Snake period:', snakePeriod, 'Purple period:', purplePeriod);
+
     const snake = calculateEMA(closePrices, snakePeriod);
     const purpleLine = calculateEMA(closePrices, purplePeriod);
+
+    console.log('11. Snake EMA (first 3):', snake ? snake.slice(0, 3) : 'NULL');
+    console.log('12. Purple EMA (first 3):', purpleLine ? purpleLine.slice(0, 3) : 'NULL');
 
     // Create color array for Snake
     const snakeColors = snake.map((value, index) => {
         return value < closePrices[index] ? '#00ff00' : '#ff0000';
     });
 
-    // Update chart
+    // Update chart data
     historicalChart.data.labels = labels;
     historicalChart.data.datasets[0].data = closePrices;
     historicalChart.data.datasets[1].data = highPrices;
@@ -674,11 +761,24 @@ function updateHistoricalChart(data) {
     historicalChart.data.datasets[3].pointBorderColor = snakeColors;
     historicalChart.data.datasets[4].data = purpleLine;
 
+    const timeframe = data.timeframe;
+    console.log('13. Timeframe:', timeframe);
+
+    console.log('14. Chart data assigned. Labels count:', historicalChart.data.labels.length);
+    console.log('15. Dataset[0] (Close) count:', historicalChart.data.datasets[0].data.length);
+    console.log('16. About to update chart...');
+
+    // Update with new configuration
     historicalChart.update('none');
 
+    console.log('17. Chart updated successfully!');
+
     // Update info
-    document.getElementById('historicalChartInfo').textContent =
-        `${data.symbol} ${data.timeframe} - ${data.date_from} to ${data.date_to} (${bars.length} bars)`;
+    const infoText = `${data.symbol} ${data.timeframe} - ${data.date_from.split('T')[1]} to ${data.date_to.split('T')[1]} (${bars.length} bars)`;
+    document.getElementById('historicalChartInfo').textContent = infoText;
+
+    console.log('18. Info updated:', infoText);
+    console.log('=== END HISTORICAL CHART UPDATE ===');
 }
 
 // Initialize on page load
