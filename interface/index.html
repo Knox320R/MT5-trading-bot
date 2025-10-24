@@ -91,7 +91,13 @@
         <div id="errorContainer"></div>
 
         <div class="chart-container">
-            <div class="chart-title">Price Chart - <span id="chartSymbol">--</span> (<span id="chartTimeframe">--</span>)</div>
+            <div class="chart-title">
+                Price Chart - <span id="chartSymbol">--</span> (<span id="chartTimeframe">--</span>)
+                <div class="trading-buttons">
+                    <button id="buyBtn" class="trade-btn buy-btn">BUY</button>
+                    <button id="sellBtn" class="trade-btn sell-btn">SELL</button>
+                </div>
+            </div>
             <canvas id="priceChart"></canvas>
         </div>
 

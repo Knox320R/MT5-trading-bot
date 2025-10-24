@@ -208,6 +208,90 @@ class RealtimeDataServer:
                     }
                 }))
 
+            elif command == 'execute_trade':
+                # Execute manual trade
+                action = data.get('action')  # 'buy' or 'sell'
+                symbol = data.get('symbol', self.current_symbol)
+
+                print(f"Manual trade request: {action.upper()} {symbol}")
+
+                try:
+                    import MetaTrader5 as mt5
+
+                    # Get symbol info
+                    symbol_info = mt5.symbol_info(symbol)
+                    if symbol_info is None:
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'message': f'Symbol {symbol} not found'
+                        }))
+                        print(f"  ✗ Symbol not found: {symbol}")
+                        return
+
+                    # Get current price
+                    tick = mt5.symbol_info_tick(symbol)
+                    if tick is None:
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'message': f'Could not get price for {symbol}'
+                        }))
+                        print(f"  ✗ Could not get price")
+                        return
+
+                    # Determine order type and price
+                    if action == 'buy':
+                        order_type = mt5.ORDER_TYPE_BUY
+                        price = tick.ask
+                    else:  # sell
+                        order_type = mt5.ORDER_TYPE_SELL
+                        price = tick.bid
+
+                    # Get volume from config or use minimum
+                    volume = symbol_info.volume_min
+
+                    # Prepare the request
+                    request = {
+                        "action": mt5.TRADE_ACTION_DEAL,
+                        "symbol": symbol,
+                        "volume": volume,
+                        "type": order_type,
+                        "price": price,
+                        "deviation": 20,
+                        "magic": 234000,
+                        "comment": "Manual trade from dashboard",
+                        "type_time": mt5.ORDER_TIME_GTC,
+                        "type_filling": mt5.ORDER_FILLING_IOC,
+                    }
+
+                    # Send trade request
+                    result = mt5.order_send(request)
+
+                    if result.retcode != mt5.TRADE_RETCODE_DONE:
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'message': f'Trade failed: {result.comment}'
+                        }))
+                        print(f"  ✗ Trade failed: {result.retcode} - {result.comment}")
+                    else:
+                        await websocket.send(json.dumps({
+                            'type': 'trade_success',
+                            'data': {
+                                'order': result.order,
+                                'volume': result.volume,
+                                'price': result.price,
+                                'symbol': symbol,
+                                'action': action
+                            }
+                        }))
+                        print(f"  ✓ Trade executed: Order #{result.order}, {action.upper()} {result.volume} {symbol} @ {result.price}")
+
+                except Exception as e:
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'message': f'Error executing trade: {str(e)}'
+                    }))
+                    print(f"  ✗ Error: {e}")
+
         except Exception as e:
             print(f"Error handling client message: {e}")
 

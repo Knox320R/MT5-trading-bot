@@ -192,6 +192,13 @@ function handleServerMessage(data) {
         // Received historical data
         console.log('Received historical data:', data.bars_count, 'bars');
         updateHistoricalChart(data);
+    } else if (data.type === 'trade_success') {
+        // Trade executed successfully
+        const tradeData = data.data;
+        const message = `✓ ${tradeData.action.toUpperCase()} order executed!\nSymbol: ${tradeData.symbol}\nVolume: ${tradeData.volume}\nPrice: ${tradeData.price}\nOrder #: ${tradeData.order}`;
+        alert(message);
+        console.log('Trade success:', tradeData);
+        showError(''); // Clear any previous errors
     }
 }
 
@@ -494,6 +501,34 @@ function clearSignals() {
     updateSignalsList();
 }
 
+// Execute manual trade
+function executeTrade(action) {
+    if (!ws || ws.readyState !== WebSocket.OPEN) {
+        alert('Not connected to server');
+        return;
+    }
+
+    if (!currentSymbol) {
+        alert('No symbol selected');
+        return;
+    }
+
+    // Confirm trade
+    const confirmMsg = `Execute ${action.toUpperCase()} trade for ${currentSymbol}?`;
+    if (!confirm(confirmMsg)) {
+        return;
+    }
+
+    console.log(`Executing ${action} trade for ${currentSymbol}`);
+
+    // Send trade command to server
+    ws.send(JSON.stringify({
+        command: 'execute_trade',
+        action: action,
+        symbol: currentSymbol
+    }));
+}
+
 // Event listeners
 function setupEventListeners() {
     // Handle symbol change
@@ -521,6 +556,16 @@ function setupEventListeners() {
     // Handle Clear Signals button
     document.getElementById('clearSignalsBtn').addEventListener('click', () => {
         clearSignals();
+    });
+
+    // Handle Buy button
+    document.getElementById('buyBtn').addEventListener('click', () => {
+        executeTrade('buy');
+    });
+
+    // Handle Sell button
+    document.getElementById('sellBtn').addEventListener('click', () => {
+        executeTrade('sell');
     });
 }
 

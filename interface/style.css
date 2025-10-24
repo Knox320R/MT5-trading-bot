@@ -142,6 +142,65 @@ select:hover, input:hover {
     margin-bottom: 15px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.trading-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.trade-btn {
+    padding: 10px 30px;
+    border: none;
+    border-radius: 5px;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+}
+
+.buy-btn {
+    background: linear-gradient(135deg, #00ff00 0%, #00cc00 100%);
+    color: #000;
+}
+
+.buy-btn:hover {
+    background: linear-gradient(135deg, #00ff00 0%, #00ff00 100%);
+    box-shadow: 0 6px 15px rgba(0, 255, 0, 0.5);
+    transform: translateY(-2px);
+}
+
+.buy-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(0, 255, 0, 0.3);
+}
+
+.sell-btn {
+    background: linear-gradient(135deg, #ff0000 0%, #cc0000 100%);
+    color: #fff;
+}
+
+.sell-btn:hover {
+    background: linear-gradient(135deg, #ff0000 0%, #ff0000 100%);
+    box-shadow: 0 6px 15px rgba(255, 0, 0, 0.5);
+    transform: translateY(-2px);
+}
+
+.sell-btn:active {
+    transform: translateY(0);
+    box-shadow: 0 2px 5px rgba(255, 0, 0, 0.3);
+}
+
+.trade-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+    transform: none !important;
 }
 
 #priceChart {
