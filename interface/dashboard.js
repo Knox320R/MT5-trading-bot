@@ -15,48 +15,126 @@ let maxSignals = 20; // Maximum number of signals to display
 const CHART_POINT_RADIUS = 1;  // Global point radius for all curves
 const CHART_POINT_HOVER_RADIUS = 3;  // Point radius on hover
 
+// Custom plugin to draw candlestick wicks centered on bodies
+const candlestickWickPlugin = {
+    id: 'candlestickWick',
+    afterDatasetsDraw: function(chart) {
+        const ctx = chart.ctx;
+        const meta = chart.getDatasetMeta(0); // Wick dataset
+        const bodyMeta = chart.getDatasetMeta(1); // Body dataset
+
+        if (!meta || !bodyMeta || meta.hidden || bodyMeta.hidden) return;
+
+        // Get wick colors from custom property or body colors
+        const wickColors = chart.data.datasets[0]._wickColors || [];
+
+        meta.data.forEach((element, index) => {
+            if (!element || element.skip) return;
+
+            const wickData = chart.data.datasets[0].data[index];
+            const bodyData = chart.data.datasets[1].data[index];
+
+            if (!wickData || wickData.length !== 2) return;
+            if (!bodyData || bodyData.length !== 2) return;
+
+            // Get the body bar x position (center)
+            const bodyBar = bodyMeta.data[index];
+            if (!bodyBar) return;
+
+            const x = bodyBar.x;
+            const yLow = chart.scales.y.getPixelForValue(wickData[0]);
+            const yHigh = chart.scales.y.getPixelForValue(wickData[1]);
+
+            // Get color from stored colors or body colors
+            const wickColor = wickColors[index] || chart.data.datasets[1].backgroundColor[index];
+
+            // Draw wick as a thin line centered on the body
+            ctx.save();
+            ctx.strokeStyle = wickColor;
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x, yLow);
+            ctx.lineTo(x, yHigh);
+            ctx.stroke();
+            ctx.restore();
+        });
+    }
+};
+
 // Initialize Chart.js
 function initializeChart() {
     const ctx = document.getElementById('priceChart').getContext('2d');
     chart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: [],
             datasets: [
                 {
+                    label: 'Candle Wick',
+                    type: 'bar',
+                    data: [],
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderColor: 'rgba(0,0,0,0)',
+                    borderWidth: 0,
+                    barThickness: 1,
+                    order: 3,
+                    xAxisID: 'x',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Candle Body',
+                    type: 'bar',
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: [],
+                    borderWidth: 1,
+                    barThickness: 8,
+                    order: 2,
+                    xAxisID: 'x',
+                    yAxisID: 'y'
+                },
+                {
                     label: 'Close',
+                    type: 'line',
                     data: [],
                     borderColor: '#00d4ff',
                     backgroundColor: 'rgba(0, 212, 255, 0.1)',
                     borderWidth: 2,
                     tension: 0.1,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0,
+                    hidden: true
                 },
                 {
                     label: 'High',
+                    type: 'line',
                     data: [],
                     borderColor: '#ffe100',
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
-                    hidden: false,
+                    hidden: true,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0
                 },
                 {
                     label: 'Low',
+                    type: 'line',
                     data: [],
                     borderColor: '#00bbff',
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
-                    hidden: false,
+                    hidden: true,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0
                 },
                 {
                     label: 'Snake (EMA 100)',
+                    type: 'line',
                     data: [],
                     borderColor: '#ffaa00',
                     borderWidth: 2,
@@ -66,17 +144,22 @@ function initializeChart() {
                     pointHoverRadius: CHART_POINT_HOVER_RADIUS,
                     pointBackgroundColor: [],
                     pointBorderColor: [],
-                    segment: {}
+                    segment: {},
+                    order: 0,
+                    hidden: true
                 },
                 {
                     label: 'Purple Line (EMA 10)',
+                    type: 'line',
                     data: [],
                     borderColor: '#9900ff',
                     borderWidth: 2,
                     tension: 0.4,
                     fill: false,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0,
+                    hidden: true
                 }
             ]
         },
@@ -113,7 +196,8 @@ function initializeChart() {
                     },
                     ticks: {
                         color: '#00d4ff'
-                    }
+                    },
+                    beginAtZero: false
                 }
             },
             plugins: {
@@ -121,9 +205,11 @@ function initializeChart() {
                     labels: {
                         color: '#00d4ff'
                     }
-                }
+                },
+                candlestickWick: true
             }
-        }
+        },
+        plugins: [candlestickWickPlugin]
     });
 }
 
@@ -370,6 +456,31 @@ function updateChart(bars, symbol, timeframe) {
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
+    // Create candlestick wicks (shadows) - thin lines from low to high
+    const candleWicks = bars.map(bar => {
+        return [bar.low, bar.high];
+    });
+
+    // Create candlestick bodies (bar chart data showing open to close)
+    // Using floating bar format: [min, max]
+    const candleBodies = bars.map(bar => {
+        return [Math.min(bar.open, bar.close), Math.max(bar.open, bar.close)];
+    });
+
+    // Create colors for candles (green if close > open, red if close < open)
+    const candleColors = bars.map(bar => {
+        return bar.close >= bar.open ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+    });
+
+    const candleBorderColors = bars.map(bar => {
+        return bar.close >= bar.open ? '#00ff00' : '#ff0000';
+    });
+
+    // Wick colors - same as body colors but for the thin line
+    const wickColors = bars.map(bar => {
+        return bar.close >= bar.open ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)';
+    });
+
     // Calculate EMAs from server config
     const snakePeriod = serverConfig?.indicators?.snake_period || 100;
     const purplePeriod = serverConfig?.indicators?.purple_line_period || 10;
@@ -385,21 +496,38 @@ function updateChart(bars, symbol, timeframe) {
     // Update labels
     chart.data.labels = labels;
 
-    // Update only the data arrays, not the entire dataset objects
-    chart.data.datasets[0].data = closePrices;
-    chart.data.datasets[1].data = highPrices;
-    chart.data.datasets[2].data = lowPrices;
-    chart.data.datasets[3].data = snake;
-    chart.data.datasets[3].segment = {
+    // Update candlestick wicks (thin lines from low to high)
+    chart.data.datasets[0].data = candleWicks;
+    chart.data.datasets[0]._wickColors = wickColors; // Store colors for plugin
+
+    // Update candlestick bodies (thick bars from open to close)
+    chart.data.datasets[1].data = candleBodies;
+    chart.data.datasets[1].backgroundColor = candleColors;
+    chart.data.datasets[1].borderColor = candleBorderColors;
+
+    // Update line datasets (indices shifted by +1 due to wick dataset)
+    chart.data.datasets[2].data = closePrices;
+    chart.data.datasets[3].data = highPrices;
+    chart.data.datasets[4].data = lowPrices;
+    chart.data.datasets[5].data = snake;
+    chart.data.datasets[5].segment = {
         borderColor: (ctx) => {
-            // Color each segment based on the point colors
             const index = ctx.p0DataIndex;
             return snakeColors[index];
         }
     };
-    chart.data.datasets[3].pointBackgroundColor = snakeColors;  // Point (node) colors
-    chart.data.datasets[3].pointBorderColor = snakeColors;  // Point border colors
-    chart.data.datasets[4].data = purpleLine;
+    chart.data.datasets[5].pointBackgroundColor = snakeColors;
+    chart.data.datasets[5].pointBorderColor = snakeColors;
+    chart.data.datasets[6].data = purpleLine;
+
+    // Calculate Y-axis range to zoom in on the price action
+    const allPrices = [...highPrices, ...lowPrices];
+    const minPrice = Math.min(...allPrices);
+    const maxPrice = Math.max(...allPrices);
+    const padding = (maxPrice - minPrice) * 0.1; // 10% padding
+
+    chart.options.scales.y.min = minPrice - padding;
+    chart.options.scales.y.max = maxPrice + padding;
 
     // Update without animation
     chart.update('none');
@@ -573,44 +701,76 @@ function setupEventListeners() {
 function initializeHistoricalChart() {
     const ctx = document.getElementById('historicalChart').getContext('2d');
     historicalChart = new Chart(ctx, {
-        type: 'line',
+        type: 'bar',
         data: {
             labels: [],
             datasets: [
                 {
+                    label: 'Candle Wick',
+                    type: 'bar',
+                    data: [],
+                    backgroundColor: 'rgba(0,0,0,0)',
+                    borderColor: 'rgba(0,0,0,0)',
+                    borderWidth: 0,
+                    barThickness: 1,
+                    order: 3,
+                    xAxisID: 'x',
+                    yAxisID: 'y'
+                },
+                {
+                    label: 'Candle Body',
+                    type: 'bar',
+                    data: [],
+                    backgroundColor: [],
+                    borderColor: [],
+                    borderWidth: 1,
+                    barThickness: 8,
+                    order: 2,
+                    xAxisID: 'x',
+                    yAxisID: 'y'
+                },
+                {
                     label: 'Close',
+                    type: 'line',
                     data: [],
                     borderColor: '#00d4ff',
                     backgroundColor: 'rgba(0, 212, 255, 0.1)',
                     borderWidth: 2,
                     tension: 0.1,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0,
+                    hidden: true
                 },
                 {
                     label: 'High',
+                    type: 'line',
                     data: [],
                     borderColor: '#ffe100',
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
-                    hidden: false,
+                    hidden: true,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0
                 },
                 {
                     label: 'Low',
+                    type: 'line',
                     data: [],
                     borderColor: '#00bbff',
                     borderWidth: 1,
                     borderDash: [5, 5],
                     fill: false,
-                    hidden: false,
+                    hidden: true,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0
                 },
                 {
                     label: 'Snake (EMA 100)',
+                    type: 'line',
                     data: [],
                     borderColor: '#ffaa00',
                     borderWidth: 2,
@@ -620,17 +780,22 @@ function initializeHistoricalChart() {
                     pointHoverRadius: CHART_POINT_HOVER_RADIUS,
                     pointBackgroundColor: [],
                     pointBorderColor: [],
-                    segment: {}
+                    segment: {},
+                    order: 0,
+                    hidden: true
                 },
                 {
                     label: 'Purple Line (EMA 10)',
+                    type: 'line',
                     data: [],
                     borderColor: '#9900ff',
                     borderWidth: 2,
                     tension: 0.4,
                     fill: false,
                     pointRadius: CHART_POINT_RADIUS,
-                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS,
+                    order: 0,
+                    hidden: true
                 }
             ]
         },
@@ -667,7 +832,8 @@ function initializeHistoricalChart() {
                     },
                     ticks: {
                         color: '#00d4ff'
-                    }
+                    },
+                    beginAtZero: false
                 }
             },
             plugins: {
@@ -677,9 +843,11 @@ function initializeHistoricalChart() {
                     labels: {
                         color: '#ffffff'
                     }
-                }
+                },
+                candlestickWick: true
             }
-        }
+        },
+        plugins: [candlestickWickPlugin]
     });
 }
 
@@ -769,21 +937,47 @@ function updateHistoricalChart(data) {
     const highPrices = bars.map(bar => bar.high);
     const lowPrices = bars.map(bar => bar.low);
 
+    // Create candlestick wicks (shadows) - thin lines from low to high
+    const candleWicks = bars.map(bar => {
+        return [bar.low, bar.high];
+    });
+
+    // Create candlestick bodies (bar chart data showing open to close)
+    // Using floating bar format: [min, max]
+    const candleBodies = bars.map(bar => {
+        return [Math.min(bar.open, bar.close), Math.max(bar.open, bar.close)];
+    });
+
+    // Create colors for candles (green if close > open, red if close < open)
+    const candleColors = bars.map(bar => {
+        return bar.close >= bar.open ? 'rgba(0, 255, 0, 0.8)' : 'rgba(255, 0, 0, 0.8)';
+    });
+
+    const candleBorderColors = bars.map(bar => {
+        return bar.close >= bar.open ? '#00ff00' : '#ff0000';
+    });
+
+    // Wick colors - same as body colors
+    const wickColors = bars.map(bar => {
+        return bar.close >= bar.open ? 'rgba(0, 255, 0, 1)' : 'rgba(255, 0, 0, 1)';
+    });
+
     console.log('6. Labels (first 3):', labels.slice(0, 3));
     console.log('7. Close prices (first 3):', closePrices.slice(0, 3));
-    console.log('8. High prices (first 3):', highPrices.slice(0, 3));
-    console.log('9. Low prices (first 3):', lowPrices.slice(0, 3));
+    console.log('8. Candle bodies (first 3):', candleBodies.slice(0, 3));
+    console.log('9. High prices (first 3):', highPrices.slice(0, 3));
+    console.log('10. Low prices (first 3):', lowPrices.slice(0, 3));
 
     // Calculate EMAs
     const snakePeriod = serverConfig?.indicators?.snake_period || 100;
     const purplePeriod = serverConfig?.indicators?.purple_line_period || 10;
-    console.log('10. Snake period:', snakePeriod, 'Purple period:', purplePeriod);
+    console.log('11. Snake period:', snakePeriod, 'Purple period:', purplePeriod);
 
     const snake = calculateEMA(closePrices, snakePeriod);
     const purpleLine = calculateEMA(closePrices, purplePeriod);
 
-    console.log('11. Snake EMA (first 3):', snake ? snake.slice(0, 3) : 'NULL');
-    console.log('12. Purple EMA (first 3):', purpleLine ? purpleLine.slice(0, 3) : 'NULL');
+    console.log('12. Snake EMA (first 3):', snake ? snake.slice(0, 3) : 'NULL');
+    console.log('13. Purple EMA (first 3):', purpleLine ? purpleLine.slice(0, 3) : 'NULL');
 
     // Create color array for Snake
     const snakeColors = snake.map((value, index) => {
@@ -792,37 +986,49 @@ function updateHistoricalChart(data) {
 
     // Update chart data
     historicalChart.data.labels = labels;
-    historicalChart.data.datasets[0].data = closePrices;
-    historicalChart.data.datasets[1].data = highPrices;
-    historicalChart.data.datasets[2].data = lowPrices;
-    historicalChart.data.datasets[3].data = snake;
-    historicalChart.data.datasets[3].segment = {
+
+    // Update candlestick wicks (thin lines from low to high)
+    historicalChart.data.datasets[0].data = candleWicks;
+    historicalChart.data.datasets[0]._wickColors = wickColors; // Store colors for plugin
+
+    // Update candlestick bodies (thick bars from open to close)
+    historicalChart.data.datasets[1].data = candleBodies;
+    historicalChart.data.datasets[1].backgroundColor = candleColors;
+    historicalChart.data.datasets[1].borderColor = candleBorderColors;
+
+    // Update line datasets (indices shifted by +1 due to wick dataset)
+    historicalChart.data.datasets[2].data = closePrices;
+    historicalChart.data.datasets[3].data = highPrices;
+    historicalChart.data.datasets[4].data = lowPrices;
+    historicalChart.data.datasets[5].data = snake;
+    historicalChart.data.datasets[5].segment = {
         borderColor: (ctx) => {
             const index = ctx.p0DataIndex;
             return snakeColors[index];
         }
     };
-    historicalChart.data.datasets[3].pointBackgroundColor = snakeColors;
-    historicalChart.data.datasets[3].pointBorderColor = snakeColors;
-    historicalChart.data.datasets[4].data = purpleLine;
+    historicalChart.data.datasets[5].pointBackgroundColor = snakeColors;
+    historicalChart.data.datasets[5].pointBorderColor = snakeColors;
+    historicalChart.data.datasets[6].data = purpleLine;
 
     const timeframe = data.timeframe;
-    console.log('13. Timeframe:', timeframe);
+    console.log('14. Timeframe:', timeframe);
 
-    console.log('14. Chart data assigned. Labels count:', historicalChart.data.labels.length);
-    console.log('15. Dataset[0] (Close) count:', historicalChart.data.datasets[0].data.length);
-    console.log('16. About to update chart...');
+    console.log('15. Chart data assigned. Labels count:', historicalChart.data.labels.length);
+    console.log('16. Dataset[0] (Candle Body) count:', historicalChart.data.datasets[0].data.length);
+    console.log('17. Dataset[1] (Close) count:', historicalChart.data.datasets[1].data.length);
+    console.log('18. About to update chart...');
 
     // Update with new configuration
     historicalChart.update('none');
 
-    console.log('17. Chart updated successfully!');
+    console.log('19. Chart updated successfully!');
 
     // Update info
     const infoText = `${data.symbol} ${data.timeframe} - ${data.date_from.split('T')[1]} to ${data.date_to.split('T')[1]} (${bars.length} bars)`;
     document.getElementById('historicalChartInfo').textContent = infoText;
 
-    console.log('18. Info updated:', infoText);
+    console.log('20. Info updated:', infoText);
     console.log('=== END HISTORICAL CHART UPDATE ===');
 }
 
