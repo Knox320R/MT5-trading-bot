@@ -24,11 +24,11 @@ const UI = {
                     </div>
                     <div class="detail-row">
                         <span>Price:</span>
-                        <span>${pos.price_open.toFixed(5)}</span>
+                        <span>${pos.price_open.toFixed(2)}</span>
                     </div>
                     <div class="detail-row">
                         <span>Current:</span>
-                        <span>${pos.price_current.toFixed(5)}</span>
+                        <span>${pos.price_current.toFixed(2)}</span>
                     </div>
                     <div class="detail-row ${pos.profit >= 0 ? 'profit' : 'loss'}">
                         <span>P/L:</span>
@@ -85,13 +85,13 @@ const UI = {
         };
 
         if (elements.bidPrice && data.bid !== undefined) {
-            elements.bidPrice.textContent = data.bid.toFixed(5);
+            elements.bidPrice.textContent = data.bid.toFixed(2);
         }
         if (elements.askPrice && data.ask !== undefined) {
-            elements.askPrice.textContent = data.ask.toFixed(5);
+            elements.askPrice.textContent = data.ask.toFixed(2);
         }
         if (elements.spread && data.spread !== undefined) {
-            elements.spread.textContent = data.spread.toFixed(1);
+            elements.spread.textContent = data.spread.toFixed(2);
         }
         if (elements.balance && data.balance !== undefined) {
             elements.balance.textContent = data.balance.toFixed(2);
