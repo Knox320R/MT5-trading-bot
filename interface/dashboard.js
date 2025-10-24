@@ -93,28 +93,17 @@ function setupHistoricalDataControls() {
 // ========================================
 
 function initializeApp() {
-    console.log('[dashboard] Initializing application...');
-
     // Initialize charts
-    console.log('[dashboard] Initializing charts...');
     AppState.chart = initializeChart('priceChart', COLORS.primary);
     AppState.historicalChart = initializeChart('historicalChart', COLORS.white);
-    console.log('[dashboard] Charts initialized', {
-        mainChart: !!AppState.chart,
-        historicalChart: !!AppState.historicalChart
-    });
 
     // Initialize WebSocket
-    console.log('[dashboard] Initializing WebSocket...');
     AppState.wsManager = new WebSocketManager();
     AppState.wsManager.connect();
 
     // Setup event handlers
-    console.log('[dashboard] Setting up event handlers...');
     setupTradingButtons();
     setupHistoricalDataControls();
-
-    console.log('[dashboard] Application initialized successfully');
 }
 
 // Start application when DOM is ready

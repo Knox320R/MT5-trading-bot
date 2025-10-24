@@ -111,16 +111,12 @@ const UI = {
         // Add event listener only once
         if (!dropdown.dataset.listenerAdded) {
             dropdown.addEventListener('change', (e) => {
-                console.log('[UI] Symbol changed to:', e.target.value);
                 if (AppState.wsManager.isConnected()) {
                     AppState.currentSymbol = e.target.value;
-                    console.log('[UI] Sending set_symbol command:', AppState.currentSymbol);
                     AppState.wsManager.send({
                         command: 'set_symbol',
                         symbol: AppState.currentSymbol
                     });
-                } else {
-                    console.warn('[UI] Cannot change symbol - not connected');
                 }
             });
             dropdown.dataset.listenerAdded = 'true';
@@ -142,20 +138,15 @@ const UI = {
         // Add event listener only once
         if (!dropdown.dataset.listenerAdded) {
             dropdown.addEventListener('change', (e) => {
-                console.log('[UI] Timeframe changed to:', e.target.value);
                 if (AppState.wsManager.isConnected()) {
                     AppState.currentTimeframe = e.target.value;
-                    console.log('[UI] Sending set_timeframe command:', AppState.currentTimeframe);
                     AppState.wsManager.send({
                         command: 'set_timeframe',
                         timeframe: AppState.currentTimeframe
                     });
-                } else {
-                    console.warn('[UI] Cannot change timeframe - not connected');
                 }
             });
             dropdown.dataset.listenerAdded = 'true';
-            console.log('[UI] Timeframe dropdown listener added');
         }
 
         // Update options if we have timeframes from server (optional, HTML has defaults)

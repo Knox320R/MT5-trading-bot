@@ -49,7 +49,6 @@ class WebSocketManager {
     handleMessage(event) {
         try {
             const data = JSON.parse(event.data);
-            console.log('[websocket] Message received:', data.type);
 
             switch(data.type) {
                 case 'positions_update':
@@ -65,16 +64,6 @@ class WebSocketManager {
                     break;
 
                 case 'market_update':
-                    console.log('[websocket] Market update received', {
-                        symbol: data.symbol,
-                        timeframe: data.timeframe,
-                        hasBars: !!data.bars,
-                        barsCount: data.bars?.length,
-                        hasTick: !!data.tick,
-                        hasAccount: !!data.account,
-                        hasPositions: !!data.positions
-                    });
-
                     // Update chart with bars data
                     if (data.bars && data.bars.length > 0) {
                         updateChartData(AppState.chart, data.bars, () => {
@@ -123,6 +112,14 @@ class WebSocketManager {
                     this.handleTradeResult(data);
                     break;
 
+                case 'symbol_changed':
+                    AppState.currentSymbol = data.symbol;
+                    break;
+
+                case 'timeframe_changed':
+                    AppState.currentTimeframe = data.timeframe;
+                    break;
+
                 case 'error':
                     console.error('[websocket] Server error:', data.message || data.error || 'Unknown error');
                     if (data.message) {
@@ -139,22 +136,13 @@ class WebSocketManager {
     }
 
     handleHistoricalData(data) {
-        console.log('[websocket] Historical data received', {
-            hasBars: !!data.bars,
-            barsCount: data.bars?.length,
-            date: data.date,
-            timeframe: data.timeframe
-        });
-
         const bars = data.bars;
 
         if (!bars || bars.length === 0) {
-            console.warn('[websocket] No historical bars available');
             document.getElementById('historicalChartInfo').textContent = 'No data available';
             return;
         }
 
-        console.log('[websocket] Updating historical chart with', bars.length, 'bars');
         updateChartData(AppState.historicalChart, bars, () => {
             const date = data.date || 'Unknown';
             const timeframe = data.timeframe || 'Unknown';

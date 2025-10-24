@@ -36,19 +36,7 @@ function calculateYAxisRange(highPrices, lowPrices, paddingPercent = 0.1) {
 }
 
 function updateChartData(chartInstance, bars, updateUI = null) {
-    console.log('[chartHelpers] updateChartData called', {
-        chartInstance: !!chartInstance,
-        barsCount: bars?.length,
-        updateUI: !!updateUI
-    });
-
-    if (!chartInstance) {
-        console.error('[chartHelpers] No chart instance provided');
-        return;
-    }
-
-    if (!bars || bars.length === 0) {
-        console.error('[chartHelpers] No bars data provided');
+    if (!chartInstance || !bars || bars.length === 0) {
         return;
     }
 
