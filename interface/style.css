@@ -288,6 +288,32 @@ select:hover, input:hover {
     color: #800080; /* Purple for Purple Line */
 }
 
+/* Color-coded labels for each curve - Historical Chart */
+#toggleHistoricalWick + .slider + .label-text,
+#toggleHistoricalBody + .slider + .label-text {
+    color: #00ff00; /* Green for candles */
+}
+
+#toggleHistoricalClose + .slider + .label-text {
+    color: #00d4ff; /* Cyan for Close */
+}
+
+#toggleHistoricalHigh + .slider + .label-text {
+    color: #ff0000; /* Red for High */
+}
+
+#toggleHistoricalLow + .slider + .label-text {
+    color: #00ff00; /* Green for Low */
+}
+
+#toggleHistoricalSnake + .slider + .label-text {
+    color: #ffff00; /* Yellow for Snake */
+}
+
+#toggleHistoricalPurple + .slider + .label-text {
+    color: #800080; /* Purple for Purple Line */
+}
+
 #priceChart {
     max-height: 500px;
 }

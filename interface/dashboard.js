@@ -105,6 +105,7 @@ function initializeApp() {
     setupTradingButtons();
     setupHistoricalDataControls();
     setupChartToggles();
+    setupHistoricalChartToggles();
 }
 
 function setupChartToggles() {
@@ -144,6 +145,48 @@ function setupChartToggles() {
                 }
 
                 AppState.chart.update('none');
+            });
+        }
+    });
+}
+
+function setupHistoricalChartToggles() {
+    const toggles = [
+        { id: 'toggleHistoricalWick', datasetIndex: 0, isWick: true },
+        { id: 'toggleHistoricalBody', datasetIndex: 1 },
+        { id: 'toggleHistoricalClose', datasetIndex: 2 },
+        { id: 'toggleHistoricalHigh', datasetIndex: 3 },
+        { id: 'toggleHistoricalLow', datasetIndex: 4 },
+        { id: 'toggleHistoricalSnake', datasetIndex: 5 },
+        { id: 'toggleHistoricalPurple', datasetIndex: 6 }
+    ];
+
+    toggles.forEach(toggle => {
+        const checkbox = document.getElementById(toggle.id);
+        if (checkbox && AppState.historicalChart) {
+            // Set initial checkbox state based on dataset visibility
+            const dataset = AppState.historicalChart.data.datasets[toggle.datasetIndex];
+
+            // For wick, check if it's enabled via a custom flag (since the dataset stays visible)
+            if (toggle.isWick) {
+                checkbox.checked = dataset._wickEnabled !== false;
+            } else {
+                checkbox.checked = !dataset.hidden;
+            }
+
+            // Add change listener
+            checkbox.addEventListener('change', (e) => {
+                const isVisible = e.target.checked;
+
+                if (toggle.isWick) {
+                    // For wick: use custom flag and keep dataset visible to prevent bar repositioning
+                    AppState.historicalChart.data.datasets[toggle.datasetIndex]._wickEnabled = isVisible;
+                } else {
+                    // For other datasets: use normal hidden property
+                    AppState.historicalChart.data.datasets[toggle.datasetIndex].hidden = !isVisible;
+                }
+
+                AppState.historicalChart.update('none');
             });
         }
     });
