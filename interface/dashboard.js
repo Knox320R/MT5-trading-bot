@@ -1,6 +1,7 @@
 // Global variables
 let ws = null;
 let chart = null;
+let historicalChart = null;
 let reconnectInterval = null;
 let currentPort = 8765;
 const portsToTry = [8765, 8766, 8767, 8768, 8769];
@@ -185,6 +186,10 @@ function handleServerMessage(data) {
         // Received trading signal
         console.log('Received trading signal:', data.signal);
         addSignal(data.signal);
+    } else if (data.type === 'historical_data') {
+        // Received historical data
+        console.log('Received historical data:', data.bars_count, 'bars');
+        updateHistoricalChart(data);
     }
 }
 
@@ -511,9 +516,183 @@ function setupEventListeners() {
     });
 }
 
+// Initialize Historical Chart
+function initializeHistoricalChart() {
+    const ctx = document.getElementById('historicalChart').getContext('2d');
+    historicalChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: [],
+            datasets: [
+                {
+                    label: 'Close',
+                    data: [],
+                    borderColor: '#00d4ff',
+                    backgroundColor: 'rgba(0, 212, 255, 0.1)',
+                    borderWidth: 2,
+                    tension: 0.1,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                },
+                {
+                    label: 'High',
+                    data: [],
+                    borderColor: '#ffe100',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                },
+                {
+                    label: 'Low',
+                    data: [],
+                    borderColor: '#00bbff',
+                    borderWidth: 1,
+                    borderDash: [5, 5],
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                },
+                {
+                    label: 'Snake',
+                    data: [],
+                    borderColor: '#00ff00',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                },
+                {
+                    label: 'Purple Line',
+                    data: [],
+                    borderColor: '#9900ff',
+                    borderWidth: 2,
+                    fill: false,
+                    pointRadius: CHART_POINT_RADIUS,
+                    pointHoverRadius: CHART_POINT_HOVER_RADIUS
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            animation: false,
+            plugins: {
+                legend: {
+                    display: true,
+                    position: 'top',
+                    labels: { color: '#ffffff' }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#ffffff', maxTicksLimit: 20 },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                },
+                y: {
+                    ticks: { color: '#ffffff' },
+                    grid: { color: 'rgba(255, 255, 255, 0.1)' }
+                }
+            }
+        }
+    });
+}
+
+// Load Historical Data
+function loadHistoricalData() {
+    const dateInput = document.getElementById('historicalDate').value;
+    const startTime = document.getElementById('historicalStartTime').value;
+    const endTime = document.getElementById('historicalEndTime').value;
+    const timeframe = document.getElementById('historicalTimeframe').value;
+
+    if (!dateInput) {
+        alert('Please select a date');
+        return;
+    }
+
+    // Build datetime strings
+    const dateFrom = `${dateInput}T${startTime}:00`;
+    const dateTo = `${dateInput}T${endTime}:59`;
+
+    console.log('Loading historical data:', dateFrom, 'to', dateTo, timeframe);
+
+    // Send request to server
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(JSON.stringify({
+            command: 'get_historical_data',
+            symbol: currentSymbol || serverConfig?.default_symbol || 'PainX 400',
+            timeframe: timeframe,
+            date_from: dateFrom,
+            date_to: dateTo
+        }));
+
+        document.getElementById('historicalChartInfo').textContent = 'Loading...';
+    } else {
+        alert('Not connected to server');
+    }
+}
+
+// Update Historical Chart
+function updateHistoricalChart(data) {
+    const bars = data.bars;
+    if (!bars || bars.length === 0) {
+        document.getElementById('historicalChartInfo').textContent = 'No data available';
+        return;
+    }
+
+    // Extract data
+    const labels = bars.map(bar => bar.time);
+    const closePrices = bars.map(bar => bar.close);
+    const highPrices = bars.map(bar => bar.high);
+    const lowPrices = bars.map(bar => bar.low);
+
+    // Calculate EMAs
+    const snakePeriod = serverConfig?.indicators?.snake_period || 100;
+    const purplePeriod = serverConfig?.indicators?.purple_line_period || 10;
+    const snake = calculateEMA(closePrices, snakePeriod);
+    const purpleLine = calculateEMA(closePrices, purplePeriod);
+
+    // Create color array for Snake
+    const snakeColors = snake.map((value, index) => {
+        return value < closePrices[index] ? '#00ff00' : '#ff0000';
+    });
+
+    // Update chart
+    historicalChart.data.labels = labels;
+    historicalChart.data.datasets[0].data = closePrices;
+    historicalChart.data.datasets[1].data = highPrices;
+    historicalChart.data.datasets[2].data = lowPrices;
+    historicalChart.data.datasets[3].data = snake;
+    historicalChart.data.datasets[3].segment = {
+        borderColor: (ctx) => {
+            const index = ctx.p0DataIndex;
+            return snakeColors[index];
+        }
+    };
+    historicalChart.data.datasets[3].pointBackgroundColor = snakeColors;
+    historicalChart.data.datasets[3].pointBorderColor = snakeColors;
+    historicalChart.data.datasets[4].data = purpleLine;
+
+    historicalChart.update('none');
+
+    // Update info
+    document.getElementById('historicalChartInfo').textContent =
+        `${data.symbol} ${data.timeframe} - ${data.date_from} to ${data.date_to} (${bars.length} bars)`;
+}
+
 // Initialize on page load
 window.addEventListener('DOMContentLoaded', () => {
     initializeChart();
+    initializeHistoricalChart();
     setupEventListeners();
     connectWebSocket();
+
+    // Set default date to yesterday
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    document.getElementById('historicalDate').valueAsDate = yesterday;
+
+    // Add historical chart event listener
+    document.getElementById('loadHistoricalBtn').addEventListener('click', loadHistoricalData);
 });

@@ -126,6 +126,48 @@ class RealtimeDataServer:
                         'message': f'Invalid timeframe: {timeframe}'
                     }))
 
+            elif command == 'get_historical_data':
+                # Fetch historical data for specified date/time range
+                symbol = data.get('symbol', self.current_symbol)
+                timeframe = data.get('timeframe', 'M1')
+                date_from = data.get('date_from')
+                date_to = data.get('date_to')
+
+                print(f"Historical data request: {symbol} {timeframe} from {date_from} to {date_to}")
+
+                try:
+                    # Parse datetime strings
+                    from datetime import datetime
+                    dt_from = datetime.fromisoformat(date_from)
+                    dt_to = datetime.fromisoformat(date_to)
+
+                    # Fetch historical bars
+                    bars = self.connector.get_bars_range(symbol, timeframe, dt_from, dt_to)
+
+                    if bars:
+                        await websocket.send(json.dumps({
+                            'type': 'historical_data',
+                            'symbol': symbol,
+                            'timeframe': timeframe,
+                            'date_from': date_from,
+                            'date_to': date_to,
+                            'bars': self.convert_to_json_serializable(bars),
+                            'bars_count': len(bars)
+                        }))
+                        print(f"  ✓ Sent {len(bars)} historical bars")
+                    else:
+                        await websocket.send(json.dumps({
+                            'type': 'error',
+                            'message': f'No historical data available for {symbol} {timeframe}'
+                        }))
+                        print(f"  ✗ No data available")
+                except Exception as e:
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'message': f'Error fetching historical data: {str(e)}'
+                    }))
+                    print(f"  ✗ Error: {e}")
+
             elif command == 'get_config':
                 # Send config to client
                 await websocket.send(json.dumps({

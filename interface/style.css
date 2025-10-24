@@ -215,6 +215,91 @@ select:hover, input:hover {
     font-weight: bold;
 }
 
+/* Historical Chart Section Styles */
+.historical-chart-section {
+    background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);
+    border: 2px solid #0f3460;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    padding: 20px;
+}
+
+.historical-header {
+    margin-bottom: 15px;
+}
+
+.historical-title {
+    font-size: 20px;
+    font-weight: bold;
+    color: #00d4ff;
+    margin-bottom: 15px;
+}
+
+.historical-controls {
+    display: flex;
+    gap: 15px;
+    flex-wrap: wrap;
+    align-items: center;
+    background: rgba(15, 52, 96, 0.3);
+    padding: 15px;
+    border-radius: 8px;
+}
+
+.historical-controls label {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    font-size: 14px;
+    color: #00d4ff;
+}
+
+.historical-controls input[type="date"],
+.historical-controls input[type="time"],
+.historical-controls select {
+    background: #0f3460;
+    border: 1px solid #00d4ff;
+    color: #ffffff;
+    padding: 8px 12px;
+    border-radius: 5px;
+    font-size: 14px;
+    min-width: 150px;
+}
+
+.historical-controls input[type="date"]:focus,
+.historical-controls input[type="time"]:focus,
+.historical-controls select:focus {
+    outline: none;
+    border-color: #00bbff;
+    box-shadow: 0 0 5px rgba(0, 212, 255, 0.5);
+}
+
+.load-historical-btn {
+    background: linear-gradient(135deg, #00d4ff 0%, #0099cc 100%);
+    color: #0a0a0a;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    align-self: flex-end;
+}
+
+.load-historical-btn:hover {
+    background: linear-gradient(135deg, #00bbff 0%, #0088bb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(0, 212, 255, 0.3);
+}
+
+.load-historical-btn:active {
+    transform: translateY(0);
+}
+
+#historicalChartInfo {
+    color: #ffe100;
+}
+
 /* Signals List Box Styles */
 .signals-container {
     background: linear-gradient(135deg, #16213e 0%, #1a1a2e 100%);

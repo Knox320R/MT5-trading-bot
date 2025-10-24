@@ -143,6 +143,45 @@ class MT5Connector:
 
         return bars
 
+    def get_bars_range(self, symbol, timeframe, date_from, date_to):
+        """Get historical bars for a specific date range"""
+        if not self.initialized:
+            return None
+
+        # Map timeframe string to MT5 constant
+        timeframe_map = {
+            'M1': mt5.TIMEFRAME_M1,
+            'M5': mt5.TIMEFRAME_M5,
+            'M15': mt5.TIMEFRAME_M15,
+            'M30': mt5.TIMEFRAME_M30,
+            'H1': mt5.TIMEFRAME_H1,
+            'H4': mt5.TIMEFRAME_H4,
+            'D1': mt5.TIMEFRAME_D1
+        }
+
+        tf = timeframe_map.get(timeframe, mt5.TIMEFRAME_M1)
+
+        # Fetch bars in the date range
+        rates = mt5.copy_rates_range(symbol, tf, date_from, date_to)
+
+        if rates is None or len(rates) == 0:
+            return None
+
+        bars = []
+        for rate in rates:
+            bars.append({
+                'time': datetime.fromtimestamp(rate['time']).strftime('%Y-%m-%d %H:%M:%S'),
+                'open': rate['open'],
+                'high': rate['high'],
+                'low': rate['low'],
+                'close': rate['close'],
+                'tick_volume': rate['tick_volume'],
+                'spread': rate['spread'],
+                'real_volume': rate['real_volume']
+            })
+
+        return bars
+
     def get_positions(self):
         """Get open positions"""
         if not self.initialized:
