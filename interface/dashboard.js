@@ -9,7 +9,9 @@ const AppState = {
     serverConfig: null,
     currentSymbol: null,
     currentTimeframe: null,
-    signals: []
+    signals: [],
+    snakePeriod: 100,
+    purplePeriod: 10
 };
 
 // ========================================
@@ -89,6 +91,76 @@ function setupHistoricalDataControls() {
 }
 
 // ========================================
+// PERIOD CONTROLS
+// ========================================
+
+function setupPeriodControls() {
+    const snakePeriodInput = document.getElementById('snakePeriod');
+    const purplePeriodInput = document.getElementById('purplePeriod');
+    const snakePeriodValue = document.getElementById('snakePeriodValue');
+    const purplePeriodValue = document.getElementById('purplePeriodValue');
+
+    if (!snakePeriodInput || !purplePeriodInput) return;
+
+    // Update Snake period
+    snakePeriodInput.addEventListener('input', (e) => {
+        const newPeriod = parseInt(e.target.value);
+        snakePeriodValue.textContent = newPeriod;
+        AppState.snakePeriod = newPeriod;
+
+        // Send to server for bot strategy
+        if (AppState.wsManager.isConnected()) {
+            AppState.wsManager.send({
+                command: 'set_indicator_period',
+                indicator: 'snake',
+                period: newPeriod
+            });
+        }
+
+        // Recalculate and update chart if data exists
+        if (AppState.chart && AppState.chart.data.labels.length > 0) {
+            const closePrices = AppState.chart.data.datasets[2].data;
+            const indicators = calculateIndicators(closePrices);
+
+            AppState.chart.data.datasets[5].data = indicators.snake;
+            AppState.chart.data.datasets[5].segment = {
+                borderColor: (ctx) => indicators.snakeColors[ctx.p0DataIndex]
+            };
+            AppState.chart.data.datasets[5].pointBackgroundColor = indicators.snakeColors;
+            AppState.chart.data.datasets[5].pointBorderColor = indicators.snakeColors;
+
+            AppState.chart.update('none');
+        }
+    });
+
+    // Update Purple period
+    purplePeriodInput.addEventListener('input', (e) => {
+        const newPeriod = parseInt(e.target.value);
+        purplePeriodValue.textContent = newPeriod;
+        AppState.purplePeriod = newPeriod;
+
+        // Send to server for bot strategy
+        if (AppState.wsManager.isConnected()) {
+            AppState.wsManager.send({
+                command: 'set_indicator_period',
+                indicator: 'purple',
+                period: newPeriod
+            });
+        }
+
+        // Recalculate and update chart if data exists
+        if (AppState.chart && AppState.chart.data.labels.length > 0) {
+            const closePrices = AppState.chart.data.datasets[2].data;
+            const indicators = calculateIndicators(closePrices);
+
+            AppState.chart.data.datasets[6].data = indicators.purpleLine;
+
+            AppState.chart.update('none');
+        }
+    });
+}
+
+// ========================================
 // INITIALIZATION
 // ========================================
 
@@ -106,6 +178,7 @@ function initializeApp() {
     setupHistoricalDataControls();
     setupChartToggles();
     setupHistoricalChartToggles();
+    setupPeriodControls();
 }
 
 function setupChartToggles() {

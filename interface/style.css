@@ -314,6 +314,77 @@ select:hover, input:hover {
     color: #800080; /* Purple for Purple Line */
 }
 
+/* Period Controls - Range Inputs */
+.period-separator {
+    width: 2px;
+    height: 30px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 10px;
+}
+
+.period-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: default;
+}
+
+.period-label {
+    font-size: 13px;
+    color: #00d4ff;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.period-control input[type="range"] {
+    width: 120px;
+    height: 6px;
+    background: #555;
+    border-radius: 3px;
+    outline: none;
+    -webkit-appearance: none;
+}
+
+.period-control input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.period-control input[type="range"]::-webkit-slider-thumb:hover {
+    background: #00ff00;
+}
+
+.period-control input[type="range"]::-moz-range-thumb {
+    width: 16px;
+    height: 16px;
+    background: #00d4ff;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: background 0.3s;
+}
+
+.period-control input[type="range"]::-moz-range-thumb:hover {
+    background: #00ff00;
+}
+
+.period-value {
+    font-size: 14px;
+    color: #fff;
+    font-weight: 600;
+    min-width: 35px;
+    text-align: center;
+    background: rgba(0, 212, 255, 0.2);
+    padding: 2px 8px;
+    border-radius: 4px;
+}
+
 #priceChart {
     max-height: 500px;
 }
