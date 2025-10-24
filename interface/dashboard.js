@@ -94,8 +94,8 @@ function setupHistoricalDataControls() {
 
 function initializeApp() {
     // Initialize charts
-    AppState.chart = initializeChart('priceChart', COLORS.primary);
-    AppState.historicalChart = initializeChart('historicalChart', COLORS.white);
+    AppState.chart = initializeChart('priceChart');
+    AppState.historicalChart = initializeChart('historicalChart');
 
     // Initialize WebSocket
     AppState.wsManager = new WebSocketManager();
@@ -104,6 +104,49 @@ function initializeApp() {
     // Setup event handlers
     setupTradingButtons();
     setupHistoricalDataControls();
+    setupChartToggles();
+}
+
+function setupChartToggles() {
+    const toggles = [
+        { id: 'toggleCandleWick', datasetIndex: 0, isWick: true },
+        { id: 'toggleCandleBody', datasetIndex: 1 },
+        { id: 'toggleClose', datasetIndex: 2 },
+        { id: 'toggleHigh', datasetIndex: 3 },
+        { id: 'toggleLow', datasetIndex: 4 },
+        { id: 'toggleSnake', datasetIndex: 5 },
+        { id: 'togglePurple', datasetIndex: 6 }
+    ];
+
+    toggles.forEach(toggle => {
+        const checkbox = document.getElementById(toggle.id);
+        if (checkbox && AppState.chart) {
+            // Set initial checkbox state based on dataset visibility
+            const dataset = AppState.chart.data.datasets[toggle.datasetIndex];
+
+            // For wick, check if it's enabled via a custom flag (since the dataset stays visible)
+            if (toggle.isWick) {
+                checkbox.checked = dataset._wickEnabled !== false;
+            } else {
+                checkbox.checked = !dataset.hidden;
+            }
+
+            // Add change listener
+            checkbox.addEventListener('change', (e) => {
+                const isVisible = e.target.checked;
+
+                if (toggle.isWick) {
+                    // For wick: use custom flag and keep dataset visible to prevent bar repositioning
+                    AppState.chart.data.datasets[toggle.datasetIndex]._wickEnabled = isVisible;
+                } else {
+                    // For other datasets: use normal hidden property
+                    AppState.chart.data.datasets[toggle.datasetIndex].hidden = !isVisible;
+                }
+
+                AppState.chart.update('none');
+            });
+        }
+    });
 }
 
 // Start application when DOM is ready

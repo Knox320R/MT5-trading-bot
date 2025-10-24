@@ -9,10 +9,13 @@ const candlestickWickPlugin = {
         const ctx = chart.ctx;
         const wickMeta = chart.getDatasetMeta(0);
         const bodyMeta = chart.getDatasetMeta(1);
+        const wickDataset = chart.data.datasets[0];
 
-        if (!wickMeta || !bodyMeta || wickMeta.hidden || bodyMeta.hidden) return;
+        // Don't draw if body is hidden or wick is disabled
+        if (!wickMeta || !bodyMeta || bodyMeta.hidden) return;
+        if (wickDataset._wickEnabled === false) return;
 
-        const wickColors = chart.data.datasets[0]._wickColors || [];
+        const wickColors = wickDataset._wickColors || [];
 
         wickMeta.data.forEach((element, index) => {
             if (!element || element.skip) return;
@@ -134,7 +137,7 @@ function createDatasetConfig() {
     ];
 }
 
-function createChartOptions(legendColor = COLORS.primary) {
+function createChartOptions() {
     return {
         responsive: true,
         maintainAspectRatio: false,
@@ -164,16 +167,14 @@ function createChartOptions(legendColor = COLORS.primary) {
         },
         plugins: {
             legend: {
-                display: true,
-                position: 'top',
-                labels: { color: legendColor }
+                display: false
             },
             candlestickWick: true
         }
     };
 }
 
-function initializeChart(canvasId, legendColor = COLORS.primary) {
+function initializeChart(canvasId) {
     const ctx = document.getElementById(canvasId).getContext('2d');
     return new Chart(ctx, {
         type: 'bar',
@@ -181,7 +182,7 @@ function initializeChart(canvasId, legendColor = COLORS.primary) {
             labels: [],
             datasets: createDatasetConfig()
         },
-        options: createChartOptions(legendColor),
+        options: createChartOptions(),
         plugins: [candlestickWickPlugin]
     });
 }

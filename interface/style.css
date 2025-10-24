@@ -203,6 +203,91 @@ select:hover, input:hover {
     transform: none !important;
 }
 
+/* Chart Controls - Smooth Toggle Switches */
+.chart-controls {
+    display: flex;
+    gap: 15px;
+    padding: 10px 15px;
+    background: rgba(0, 0, 0, 0.3);
+    border-radius: 8px;
+    margin-bottom: 10px;
+    flex-wrap: wrap;
+    justify-content: space-evenly;
+}
+
+.switch-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+}
+
+.switch-label input[type="checkbox"] {
+    display: none;
+}
+
+.switch-label .slider {
+    position: relative;
+    width: 40px;
+    height: 20px;
+    background: #555;
+    border-radius: 20px;
+    transition: background 0.3s;
+}
+
+.switch-label .slider::before {
+    content: '';
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: #fff;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.switch-label input[type="checkbox"]:checked + .slider {
+    background: #00d4ff;
+}
+
+.switch-label input[type="checkbox"]:checked + .slider::before {
+    transform: translateX(20px);
+}
+
+.switch-label .label-text {
+    font-size: 13px;
+    color: #00d4ff;
+    font-weight: 500;
+}
+
+/* Color-coded labels for each curve */
+#toggleCandleWick + .slider + .label-text,
+#toggleCandleBody + .slider + .label-text {
+    color: #00ff00; /* Green for candles */
+}
+
+#toggleClose + .slider + .label-text {
+    color: #00d4ff; /* Cyan for Close */
+}
+
+#toggleHigh + .slider + .label-text {
+    color: #ff0000; /* Red for High */
+}
+
+#toggleLow + .slider + .label-text {
+    color: #00ff00; /* Green for Low */
+}
+
+#toggleSnake + .slider + .label-text {
+    color: #ffff00; /* Yellow for Snake (dynamic green/red on chart) */
+}
+
+#togglePurple + .slider + .label-text {
+    color: #800080; /* Purple for Purple Line */
+}
+
 #priceChart {
     max-height: 500px;
 }
