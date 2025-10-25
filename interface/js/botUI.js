@@ -8,6 +8,12 @@ function updateBotStatus(data) {
     const botData = data.data;
     const symbol = data.symbol;
 
+    // ONLY update if this is the currently selected symbol
+    // Don't auto-switch when bot engine processes other symbols
+    if (AppState.currentSymbol && symbol !== AppState.currentSymbol) {
+        return;
+    }
+
     // Update header
     document.getElementById('botSymbol').textContent = symbol;
 

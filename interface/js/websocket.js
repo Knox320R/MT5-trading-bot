@@ -17,7 +17,6 @@ class WebSocketManager {
         this.ws = new WebSocket(`ws://localhost:${port}`);
 
         this.ws.onopen = () => {
-            console.log('Connected to WebSocket server on port', port);
             this.currentPort = port;
             UI.updateStatus({ connection: 'Connected' });
 
@@ -37,7 +36,6 @@ class WebSocketManager {
         };
 
         this.ws.onclose = () => {
-            console.log('WebSocket connection closed');
             UI.updateStatus({ connection: 'Disconnected' });
 
             if (!this.reconnectInterval) {
@@ -97,11 +95,40 @@ class WebSocketManager {
                     break;
 
                 case 'config':
-                    AppState.serverConfig = data.config;
-                    AppState.currentSymbol = data.config?.symbol;
-                    AppState.currentTimeframe = data.config?.timeframe;
-                    UI.populateSymbolDropdown(data.config?.available_symbols || []);
-                    UI.populateTimeframeDropdown(data.config?.available_timeframes || []);
+
+                    // Store server config
+                    AppState.serverConfig = data.data;
+
+                    // Set default symbol and timeframe from config
+                    AppState.currentSymbol = data.data?.default_symbol || 'PainX 400';
+                    AppState.currentTimeframe = data.data?.default_timeframe || 'M1';
+
+                    // Set indicator periods from config
+                    if (data.data?.indicators) {
+                        AppState.snakePeriod = data.data.indicators.snake_period || 100;
+                        AppState.purplePeriod = data.data.indicators.purple_line_period || 10;
+
+                        // Update UI sliders to match config
+                        const snakePeriodInput = document.getElementById('snakePeriod');
+                        const purplePeriodInput = document.getElementById('purplePeriod');
+                        const snakePeriodValue = document.getElementById('snakePeriodValue');
+                        const purplePeriodValue = document.getElementById('purplePeriodValue');
+
+                        if (snakePeriodInput) {
+                            snakePeriodInput.value = AppState.snakePeriod;
+                            if (snakePeriodValue) snakePeriodValue.textContent = AppState.snakePeriod;
+                        }
+                        if (purplePeriodInput) {
+                            purplePeriodInput.value = AppState.purplePeriod;
+                            if (purplePeriodValue) purplePeriodValue.textContent = AppState.purplePeriod;
+                        }
+
+                    }
+
+                    // Populate dropdowns with symbols and timeframes from config
+                    UI.populateSymbolDropdown(data.data?.symbols || []);
+                    UI.populateTimeframeDropdown(data.data?.timeframes || []);
+
                     break;
 
                 case 'historical_data':
@@ -129,14 +156,12 @@ class WebSocketManager {
 
                 case 'trade_executed':
                     // Show notification for trade execution
-                    console.log(`✅ Trade Executed: ${data.bot_type} ${data.symbol} @ ${data.price}`);
                     this.showNotification(`Trade Executed: ${data.bot_type} on ${data.symbol}`, 'success');
                     break;
 
                 case 'trade_closed':
                     // Show notification for trade closure
                     const profitSign = data.profit >= 0 ? '+' : '';
-                    console.log(`🔴 Trade Closed: ${data.bot_type} ${data.symbol} ${profitSign}$${data.profit.toFixed(2)}`);
                     this.showNotification(`Trade Closed: ${data.bot_type} ${profitSign}$${data.profit.toFixed(2)}`, data.profit >= 0 ? 'success' : 'error');
                     break;
 
@@ -148,7 +173,6 @@ class WebSocketManager {
                     break;
 
                 default:
-                    console.log('Unknown message type:', data.type);
             }
         } catch (error) {
             console.error('Error parsing WebSocket message:', error);
@@ -180,14 +204,12 @@ class WebSocketManager {
     }
 
     tryReconnect() {
-        console.log('Attempting to reconnect...');
 
         for (let port of WEBSOCKET_CONFIG.portsToTry) {
             try {
                 this.connect(port);
                 break;
             } catch (error) {
-                console.log(`Failed to connect to port ${port}`);
             }
         }
     }
@@ -206,7 +228,6 @@ class WebSocketManager {
 
     showNotification(message, type = 'info') {
         // Simple notification using browser notification API or console
-        console.log(`[${type.toUpperCase()}] ${message}`);
 
         // You can also add a visual notification in the UI if desired
         // For now, just log to console
