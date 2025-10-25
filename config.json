@@ -133,12 +133,14 @@
     "snake": {
       "period": 100,
       "type": "EMA",
-      "description": "Primary trend indicator - EMA 100 (TEMPLATE-LOCKED, user-adjustable via UI)"
+      "locked": true,
+      "description": "Primary trend indicator - EMA 100 (TEMPLATE-LOCKED, DO NOT MODIFY)"
     },
     "purple_line": {
       "period": 10,
       "type": "EMA",
-      "description": "Entry signal indicator - EMA 10 (TEMPLATE-LOCKED, user-adjustable via UI)"
+      "locked": true,
+      "description": "Entry signal indicator - EMA 10 (TEMPLATE-LOCKED, DO NOT MODIFY)"
     },
     "rsi": {
       "period": 14,

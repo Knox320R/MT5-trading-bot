@@ -30,13 +30,18 @@ class RiskManager:
         # Daily tracking (resets at 16:00)
         self.daily_stats = {}  # symbol -> {profit, loss, trade_count, last_reset_day}
 
-    def check_all_gates(self, symbol: str, order_type: str) -> Dict:
+        # Consecutive orders tracking per bot per symbol (resets at 16:00)
+        # Format: symbol -> bot_type -> {consecutive_count, last_reset_day}
+        self.consecutive_orders = {}
+
+    def check_all_gates(self, symbol: str, order_type: str, bot_type: str = None) -> Dict:
         """
         Check all risk gates before allowing trade.
 
         Args:
             symbol: Trading symbol
             order_type: 'buy' or 'sell'
+            bot_type: Bot type (e.g., 'pain_buy', 'pain_sell') for consecutive orders tracking
 
         Returns:
             Dictionary with:
@@ -72,8 +77,8 @@ class RiskManager:
         if not gates['daily_loss']['allowed']:
             reasons.append(gates['daily_loss']['reason'])
 
-        # 6. Consecutive orders
-        gates['consecutive'] = self._check_consecutive_orders(symbol)
+        # 6. Consecutive orders (per bot per symbol)
+        gates['consecutive'] = self._check_consecutive_orders(symbol, bot_type)
         if not gates['consecutive']['allowed']:
             reasons.append(gates['consecutive']['reason'])
 
@@ -186,21 +191,64 @@ class RiskManager:
             'limit': limit_usd
         }
 
-    def _check_consecutive_orders(self, symbol: str) -> Dict:
-        """Check if max consecutive orders exceeded"""
-        max_orders = config.get_max_concurrent_orders()
+    def _check_consecutive_orders(self, symbol: str, bot_type: str = None) -> Dict:
+        """
+        Check if max consecutive orders in a row exceeded for this bot/symbol.
 
-        # Get current open positions for symbol
-        positions = self.connector.get_positions(symbol) if hasattr(self.connector, 'get_positions') else []
-        current_count = len(positions)
+        Tracks consecutive orders per bot per symbol per day.
+        Counter increments on each order, resets on:
+        - Daily boundary (16:00)
+        - Profitable trade close (breaks the losing streak)
 
-        within_limit = current_count < max_orders
+        Args:
+            symbol: Trading symbol
+            bot_type: Bot type (e.g., 'pain_buy')
+
+        Returns:
+            Dict with allowed status and details
+        """
+        max_consecutive = config.get_max_concurrent_orders()  # Will rename config method later
+
+        if bot_type is None:
+            # Fallback: check total open positions if bot_type not provided
+            positions = self.connector.get_positions(symbol) if hasattr(self.connector, 'get_positions') else []
+            current_count = len(positions)
+            within_limit = current_count < max_consecutive
+            return {
+                'allowed': within_limit,
+                'reason': '' if within_limit else f'Max open positions ({max_consecutive}) reached',
+                'current': current_count,
+                'max': max_consecutive
+            }
+
+        # Check/reset daily boundary
+        current_day = self.tz_handler.get_current_trading_day()
+
+        if symbol not in self.consecutive_orders:
+            self.consecutive_orders[symbol] = {}
+
+        if bot_type not in self.consecutive_orders[symbol]:
+            self.consecutive_orders[symbol][bot_type] = {
+                'consecutive_count': 0,
+                'last_reset_day': current_day
+            }
+
+        bot_counter = self.consecutive_orders[symbol][bot_type]
+
+        # Reset if new day
+        if bot_counter['last_reset_day'] != current_day:
+            bot_counter['consecutive_count'] = 0
+            bot_counter['last_reset_day'] = current_day
+
+        current_count = bot_counter['consecutive_count']
+        within_limit = current_count < max_consecutive
 
         return {
             'allowed': within_limit,
-            'reason': '' if within_limit else f'Max concurrent orders ({max_orders}) reached',
+            'reason': '' if within_limit else f'{bot_type} consecutive orders ({current_count}/{max_consecutive}) limit reached',
             'current': current_count,
-            'max': max_orders
+            'max': max_consecutive,
+            'bot_type': bot_type
         }
 
     def _check_account_health(self) -> Dict:
@@ -250,13 +298,14 @@ class RiskManager:
 
         return stats
 
-    def record_trade_result(self, symbol: str, profit_usd: float):
+    def record_trade_result(self, symbol: str, profit_usd: float, bot_type: str = None):
         """
-        Record trade result for daily tracking.
+        Record trade result for daily tracking and consecutive orders counter.
 
         Args:
             symbol: Trading symbol
             profit_usd: Profit/loss in USD (negative for loss)
+            bot_type: Bot type (e.g., 'pain_buy') - used for consecutive orders tracking
         """
         stats = self._get_daily_stats(symbol)
 
@@ -266,6 +315,42 @@ class RiskManager:
             stats['loss'] += abs(profit_usd)
 
         stats['trade_count'] += 1
+
+        # Reset consecutive orders counter if profitable trade
+        if bot_type and profit_usd > 0:
+            if symbol in self.consecutive_orders and bot_type in self.consecutive_orders[symbol]:
+                self.consecutive_orders[symbol][bot_type]['consecutive_count'] = 0
+
+    def increment_consecutive_orders(self, symbol: str, bot_type: str):
+        """
+        Increment consecutive orders counter for this bot/symbol.
+
+        Call this when an order is placed.
+
+        Args:
+            symbol: Trading symbol
+            bot_type: Bot type (e.g., 'pain_buy')
+        """
+        current_day = self.tz_handler.get_current_trading_day()
+
+        if symbol not in self.consecutive_orders:
+            self.consecutive_orders[symbol] = {}
+
+        if bot_type not in self.consecutive_orders[symbol]:
+            self.consecutive_orders[symbol][bot_type] = {
+                'consecutive_count': 0,
+                'last_reset_day': current_day
+            }
+
+        bot_counter = self.consecutive_orders[symbol][bot_type]
+
+        # Reset if new day
+        if bot_counter['last_reset_day'] != current_day:
+            bot_counter['consecutive_count'] = 0
+            bot_counter['last_reset_day'] = current_day
+
+        # Increment counter
+        bot_counter['consecutive_count'] += 1
 
     def get_daily_summary(self, symbol: str) -> str:
         """

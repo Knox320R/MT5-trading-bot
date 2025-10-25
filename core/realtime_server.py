@@ -415,7 +415,7 @@ class RealtimeDataServer:
                             bot_type_str = bot_type.value
                             order_type = 'buy' if 'buy' in bot_type_str else 'sell'
 
-                            risk_check = self.risk_manager.check_all_gates(symbol, order_type)
+                            risk_check = self.risk_manager.check_all_gates(symbol, order_type, bot_type_str)
                             if not risk_check['allowed']:
                                 print(f"⚠️  {bot_type_str} BLOCKED by risk gates: {', '.join(risk_check['reasons'])}")
                                 continue
@@ -434,6 +434,9 @@ class RealtimeDataServer:
 
                             if entry_result['success']:
                                 print(f"✅ {bot_type_str} EXECUTED: {symbol} @ {entry_result['price']:.5f}")
+
+                                # Increment consecutive orders counter
+                                self.risk_manager.increment_consecutive_orders(symbol, bot_type_str)
 
                                 # Log trade entry
                                 self.trade_logger.log_trade_entry(
@@ -472,8 +475,8 @@ class RealtimeDataServer:
                         for exit_info in exits:
                             print(f"🔴 EXIT: {self.exit_manager.get_exit_summary(exit_info)}")
 
-                            # Record profit/loss for risk tracking
-                            self.risk_manager.record_trade_result(symbol, exit_info['profit'])
+                            # Record profit/loss for risk tracking (resets consecutive counter if profitable)
+                            self.risk_manager.record_trade_result(symbol, exit_info['profit'], exit_info['bot_type'])
 
                             # Log trade exit
                             self.trade_logger.log_trade_exit(

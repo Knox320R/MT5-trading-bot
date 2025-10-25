@@ -221,18 +221,36 @@ class Config:
         """Get log directory path"""
         return self.get('logging', 'log_directory', default='logs')
 
-    # Indicator settings
+    # Indicator settings (TEMPLATE-LOCKED)
     def get_snake_period(self) -> int:
-        """Get Snake (EMA) period"""
-        return self.get('indicators', 'snake', 'period', default=100)
+        """
+        Get Snake (EMA) period.
+
+        TEMPLATE-LOCKED: Always returns 100.
+        This value cannot be modified - it is part of the strategy template.
+        """
+        # Enforce template value regardless of config
+        config_value = self.get('indicators', 'snake', 'period', default=100)
+        if config_value != 100:
+            print(f"WARNING: Snake period in config ({config_value}) does not match template (100). Using template value 100.")
+        return 100  # TEMPLATE-LOCKED
 
     def get_snake_type(self) -> str:
         """Get Snake indicator type"""
         return self.get('indicators', 'snake', 'type', default='EMA')
 
     def get_purple_line_period(self) -> int:
-        """Get Purple Line (EMA) period"""
-        return self.get('indicators', 'purple_line', 'period', default=10)
+        """
+        Get Purple Line (EMA) period.
+
+        TEMPLATE-LOCKED: Always returns 10.
+        This value cannot be modified - it is part of the strategy template.
+        """
+        # Enforce template value regardless of config
+        config_value = self.get('indicators', 'purple_line', 'period', default=10)
+        if config_value != 10:
+            print(f"WARNING: Purple Line period in config ({config_value}) does not match template (10). Using template value 10.")
+        return 10  # TEMPLATE-LOCKED
 
     def get_purple_line_type(self) -> str:
         """Get Purple Line indicator type"""
