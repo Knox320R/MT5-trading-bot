@@ -118,20 +118,22 @@ class BotEngine:
                     'last_check': None
                 }
 
-    def process_symbol(self, symbol: str, m1_bars: List[Dict]) -> Dict:
+    def process_symbol(self, symbol: str, m1_bars: List[Dict], d1_bars_mt5: List[Dict] = None) -> Dict:
         """
         Process one symbol through all four bots.
 
         Args:
             symbol: Trading symbol
             m1_bars: List of M1 OHLC bars (closed candles only)
+            d1_bars_mt5: Optional D1 bars from MT5 (uses broker's daily boundary).
+                         If provided, these are used for daily bias instead of resampled D1.
 
         Returns:
             Dictionary with bot states and signals
         """
         self.initialize_symbol(symbol)
 
-        # Resample to all timeframes
+        # Resample to all timeframes (except D1 if MT5 D1 bars provided)
         tf_data = self.resampler.resample_all_timeframes(m1_bars)
 
         # Calculate indicators for all timeframes
@@ -139,8 +141,8 @@ class BotEngine:
         for tf, bars in tf_data.items():
             tf_indicators[tf] = self.indicator_calc.get_indicators_for_bars(bars, f"{symbol}_{tf}")
 
-        # Get daily bias
-        d1_bars = tf_data.get('D1', [])
+        # Get daily bias using MT5's native D1 bars if provided, otherwise use resampled
+        d1_bars = d1_bars_mt5 if d1_bars_mt5 is not None else tf_data.get('D1', [])
         bias_result = self.daily_bias.get_bias(symbol, d1_bars)
         bias = bias_result['bias']
         level50 = bias_result.get('level50')

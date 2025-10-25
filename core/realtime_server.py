@@ -398,8 +398,23 @@ class RealtimeDataServer:
                             'volume': int(rate['tick_volume'])
                         })
 
-                    # Process through bot engine
-                    bot_results = self.bot_engine.process_symbol(symbol, m1_bars)
+                    # Get D1 bars directly from MT5 (uses broker's daily boundary)
+                    d1_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 10)
+                    d1_bars_mt5 = None
+                    if d1_rates is not None and len(d1_rates) > 0:
+                        d1_bars_mt5 = []
+                        for rate in d1_rates:
+                            d1_bars_mt5.append({
+                                'time': datetime.fromtimestamp(rate['time']),
+                                'open': float(rate['open']),
+                                'high': float(rate['high']),
+                                'low': float(rate['low']),
+                                'close': float(rate['close']),
+                                'volume': int(rate['tick_volume'])
+                            })
+
+                    # Process through bot engine with MT5 D1 bars
+                    bot_results = self.bot_engine.process_symbol(symbol, m1_bars, d1_bars_mt5)
 
                     # Store results for UI
                     self.bot_states[symbol] = bot_results
