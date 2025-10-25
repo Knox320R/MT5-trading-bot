@@ -9,6 +9,11 @@ from .mt5_connector import MT5Connector
 from .config_loader import config
 from .signal_detector import SignalDetector
 from .csv_recorder import CSVRecorder
+from .bot_engine import BotEngine
+from .order_manager import OrderManager
+from .exit_manager import ExitManager
+from .trade_logger import TradeLogger
+from .timezone_handler import TimezoneHandler
 
 # Set Windows-specific event loop policy
 if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
@@ -24,6 +29,19 @@ class RealtimeDataServer:
         self.update_interval = config.get_update_interval()
         self.signal_detector = SignalDetector(self.connector)
         self.csv_recorder = CSVRecorder()
+
+        # Initialize bot engine components
+        self.tz_handler = TimezoneHandler(
+            timezone=config.get('environment', {}).get('timezone', 'America/Bogota'),
+            daily_close_hour=16
+        )
+        self.bot_engine = BotEngine(self.connector)
+        self.order_manager = OrderManager(self.connector, self.tz_handler)
+        self.exit_manager = ExitManager(self.order_manager, self.bot_engine.indicator_calc)
+        self.trade_logger = TradeLogger(self.tz_handler)
+
+        # Track bot states for UI
+        self.bot_states = {}  # symbol -> bot results
 
     async def register_client(self, websocket):
         """Register a new WebSocket client"""
@@ -195,6 +213,27 @@ class RealtimeDataServer:
                     }))
                     print(f"  ✗ Error: {e}")
 
+            elif command == 'set_indicator_period':
+                # Update indicator periods (from UI range inputs)
+                indicator = data.get('indicator')  # 'snake' or 'purple'
+                period = data.get('period')
+
+                print(f"Indicator period update: {indicator} = {period}")
+
+                # Update in bot engine
+                if indicator == 'snake':
+                    current_purple = self.bot_engine.indicator_calc.purple_period
+                    self.bot_engine.update_indicator_periods(period, current_purple)
+                elif indicator == 'purple':
+                    current_snake = self.bot_engine.indicator_calc.snake_period
+                    self.bot_engine.update_indicator_periods(current_snake, period)
+
+                await websocket.send(json.dumps({
+                    'type': 'indicator_period_updated',
+                    'indicator': indicator,
+                    'period': period
+                }))
+
             elif command == 'get_config':
                 # Send config to client
                 await websocket.send(json.dumps({
@@ -314,9 +353,9 @@ class RealtimeDataServer:
             except Exception as e:
                 print(f"Error unregistering client: {e}")
 
-    async def detect_signals_loop(self):
-        """Detect trading signals for all symbols every 2 seconds"""
-        print("Starting signal detection loop...")
+    async def bot_engine_loop(self):
+        """Run bot engine for all symbols every 2 seconds"""
+        print("Starting bot engine loop...")
         print(f"Checking symbols: {config.get_all_symbols()}")
         print()
 
@@ -328,36 +367,135 @@ class RealtimeDataServer:
                 all_symbols = config.get_all_symbols()
 
                 for symbol in all_symbols:
-                    # Detect perfect signals for this symbol
-                    signals = self.signal_detector.detect_signals(symbol)
+                    # Get M1 bars for the symbol
+                    import MetaTrader5 as mt5
+                    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 200)
 
-                    # Process each detected perfect signal
-                    for signal in signals:
-                        if signal['met']:
-                            # Print signal notification
-                            print(f"🎯 SIGNAL DETECTED: {signal['type']} {signal['symbol']} @ {signal['price']:.5f}")
+                    if rates is None or len(rates) == 0:
+                        continue
 
-                            # Record to CSV
-                            self.csv_recorder.record_signal(signal)
+                    # Convert to bars format
+                    m1_bars = []
+                    for rate in rates:
+                        m1_bars.append({
+                            'time': datetime.fromtimestamp(rate['time']),
+                            'open': float(rate['open']),
+                            'high': float(rate['high']),
+                            'low': float(rate['low']),
+                            'close': float(rate['close']),
+                            'volume': int(rate['tick_volume'])
+                        })
 
-                            # Broadcast to all connected clients
-                            await self.send_data_to_clients({
-                                'type': 'trading_signal',
-                                'signal': signal
+                    # Process through bot engine
+                    bot_results = self.bot_engine.process_symbol(symbol, m1_bars)
+
+                    # Store results for UI
+                    self.bot_states[symbol] = bot_results
+
+                    # Check for ready signals and execute if risk gates pass
+                    for bot_type, result in bot_results['bot_results'].items():
+                        if result['ready']:
+                            # Check if already in position
+                            if self.order_manager.has_open_position(symbol, bot_type.value):
+                                continue
+
+                            # Check global risk gates
+                            bot_type_str = bot_type.value
+                            order_type = 'buy' if 'buy' in bot_type_str else 'sell'
+
+                            # Execute order
+                            if 'buy' in bot_type_str:
+                                entry_result = self.order_manager.execute_buy(
+                                    symbol, bot_type_str,
+                                    reason=' | '.join(result['reasons'])
+                                )
+                            else:
+                                entry_result = self.order_manager.execute_sell(
+                                    symbol, bot_type_str,
+                                    reason=' | '.join(result['reasons'])
+                                )
+
+                            if entry_result['success']:
+                                print(f"✅ {bot_type_str} EXECUTED: {symbol} @ {entry_result['price']:.5f}")
+
+                                # Log trade entry
+                                self.trade_logger.log_trade_entry(
+                                    symbol, bot_type_str, entry_result,
+                                    bot_results['bias'], bot_results['trend_summary']
+                                )
+
+                                # Broadcast to clients
+                                await self.send_data_to_clients({
+                                    'type': 'trade_executed',
+                                    'bot_type': bot_type_str,
+                                    'symbol': symbol,
+                                    'action': order_type,
+                                    'price': entry_result['price'],
+                                    'ticket': entry_result['ticket']
+                                })
+                            else:
+                                print(f"❌ {bot_type_str} FAILED: {symbol} - {entry_result.get('error')}")
+
+                    # Check exits for open positions
+                    m5_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, 20)
+                    if m5_rates is not None and len(m5_rates) > 0:
+                        m5_bars = []
+                        for rate in m5_rates:
+                            m5_bars.append({
+                                'time': datetime.fromtimestamp(rate['time']),
+                                'open': float(rate['open']),
+                                'high': float(rate['high']),
+                                'low': float(rate['low']),
+                                'close': float(rate['close']),
+                                'volume': int(rate['tick_volume'])
                             })
+
+                        exits = self.exit_manager.check_exits(symbol, m5_bars)
+
+                        for exit_info in exits:
+                            print(f"🔴 EXIT: {self.exit_manager.get_exit_summary(exit_info)}")
+
+                            # Log trade exit
+                            self.trade_logger.log_trade_exit(
+                                symbol, exit_info['bot_type'], exit_info,
+                                bot_results['bias'], bot_results['trend_summary']
+                            )
+
+                            # Broadcast to clients
+                            await self.send_data_to_clients({
+                                'type': 'trade_closed',
+                                'symbol': symbol,
+                                'bot_type': exit_info['bot_type'],
+                                'profit': exit_info['profit'],
+                                'reason': exit_info['reason']
+                            })
+
+                    # Broadcast bot states to clients
+                    await self.send_data_to_clients({
+                        'type': 'bot_status',
+                        'symbol': symbol,
+                        'data': bot_results
+                    })
 
                 # Print progress every 30 iterations (every 60 seconds)
                 if iteration % 30 == 1:
-                    print(f"[{iteration}] Signal detection running - checking {len(all_symbols)} symbols")
+                    print(f"[{iteration}] Bot engine running - checking {len(all_symbols)} symbols")
 
-                # Wait 2 seconds before next detection cycle
+                # Wait 2 seconds before next cycle
                 await asyncio.sleep(2)
 
             except Exception as e:
-                print(f"✗ Error in signal detection loop: {e}")
+                print(f"✗ Error in bot engine loop: {e}")
                 import traceback
                 traceback.print_exc()
                 await asyncio.sleep(5)
+
+    async def detect_signals_loop(self):
+        """Detect trading signals for all symbols every 2 seconds (legacy - now using bot_engine_loop)"""
+        print("Signal detection loop is replaced by bot_engine_loop")
+        # This is now handled by bot_engine_loop
+        while self.running:
+            await asyncio.sleep(60)
 
     async def stream_market_data(self):
         """Stream market data to connected clients"""
@@ -491,8 +629,8 @@ class RealtimeDataServer:
         # Start market data streaming in background
         asyncio.create_task(self.stream_market_data())
 
-        # Start signal detection loop in background
-        asyncio.create_task(self.detect_signals_loop())
+        # Start bot engine loop in background (replaces old signal detection)
+        asyncio.create_task(self.bot_engine_loop())
 
         # Keep server running
         await asyncio.Future()  # Run forever

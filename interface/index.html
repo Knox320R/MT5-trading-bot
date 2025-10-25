@@ -90,6 +90,58 @@
 
         <div id="errorContainer"></div>
 
+        <!-- Bot Status Panel -->
+        <div class="bot-status-panel">
+            <div class="bot-panel-title">
+                🤖 Trading Bot Status - <span id="botSymbol">--</span>
+                <span id="botBias" class="bias-indicator">--</span>
+            </div>
+            <div class="bot-grid">
+                <div class="bot-card" id="painBuyCard">
+                    <div class="bot-card-header">
+                        <span class="bot-name">PAIN BUY</span>
+                        <span class="bot-status" id="painBuyStatus">○ IDLE</span>
+                    </div>
+                    <div class="bot-reasons" id="painBuyReasons">Waiting for conditions...</div>
+                </div>
+                <div class="bot-card" id="painSellCard">
+                    <div class="bot-card-header">
+                        <span class="bot-name">PAIN SELL</span>
+                        <span class="bot-status" id="painSellStatus">○ IDLE</span>
+                    </div>
+                    <div class="bot-reasons" id="painSellReasons">Waiting for conditions...</div>
+                </div>
+                <div class="bot-card" id="gainBuyCard">
+                    <div class="bot-card-header">
+                        <span class="bot-name">GAIN BUY</span>
+                        <span class="bot-status" id="gainBuyStatus">○ IDLE</span>
+                    </div>
+                    <div class="bot-reasons" id="gainBuyReasons">Waiting for conditions...</div>
+                </div>
+                <div class="bot-card" id="gainSellCard">
+                    <div class="bot-card-header">
+                        <span class="bot-name">GAIN SELL</span>
+                        <span class="bot-status" id="gainSellStatus">○ IDLE</span>
+                    </div>
+                    <div class="bot-reasons" id="gainSellReasons">Waiting for conditions...</div>
+                </div>
+            </div>
+            <div class="bot-info-bar">
+                <div class="bot-info-item">
+                    <span class="bot-info-label">Trend:</span>
+                    <span id="botTrend">--</span>
+                </div>
+                <div class="bot-info-item">
+                    <span class="bot-info-label">M1 State:</span>
+                    <span id="botM1State">--</span>
+                </div>
+                <div class="bot-info-item">
+                    <span class="bot-info-label">Daily P/L:</span>
+                    <span id="botDailyPL">$0.00</span>
+                </div>
+            </div>
+        </div>
+
         <div class="chart-container">
             <div class="chart-title">
                 Price Chart - <span id="chartSymbol">--</span> (<span id="chartTimeframe">--</span>)
@@ -245,7 +297,26 @@
     <script src="js/chartConfig.js"></script>
     <script src="js/chartHelpers.js"></script>
     <script src="js/ui.js"></script>
+    <script src="js/botUI.js"></script>
     <script src="js/websocket.js"></script>
     <script src="dashboard.js"></script>
+
+    <script>
+        // Add bot_status message handler to websocket
+        if (typeof WebSocketManager !== 'undefined') {
+            const originalHandleMessage = WebSocketManager.prototype.handleMessage;
+            WebSocketManager.prototype.handleMessage = function(event) {
+                try {
+                    const data = JSON.parse(event.data);
+                    if (data.type === 'bot_status' && window.updateBotStatus) {
+                        window.updateBotStatus(data);
+                    }
+                } catch (e) {
+                    // Continue to original handler
+                }
+                return originalHandleMessage.call(this, event);
+            };
+        }
+    </script>
 </body>
 </html>

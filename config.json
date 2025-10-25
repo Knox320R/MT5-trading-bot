@@ -72,32 +72,73 @@
     "max_spread_pips": 2.0,
     "max_slippage_pips": 2.0
   },
-  "strategy": {
-    "pain_sell": {
-      "enabled": true,
-      "d1_wick_threshold_percent": 50.0,
-      "h4_fibonacci_level": 0.5,
-      "hold_time_minutes": 5,
-      "wait_candles_after_close": 1
-    },
-    "gain_buy": {
-      "enabled": true,
-      "d1_wick_threshold_percent": 50.0,
-      "h4_fibonacci_level": 0.5,
-      "hold_time_minutes": 5,
-      "wait_candles_after_close": 1
+  "bot_engine": {
+    "use_closed_candles_only": true,
+    "resample_from_m1": true,
+    "base_timeframe": "M1",
+    "comment": "Four-bot trading engine with deterministic rules. All bots run in parallel per symbol.",
+    "bots": {
+      "pain_buy": {
+        "enabled": true,
+        "description": "Simple trend-break long without Fibonacci, only on BUY days"
+      },
+      "pain_sell": {
+        "enabled": true,
+        "description": "Simple trend-break short with wick-based day stop, only on SELL days"
+      },
+      "gain_buy": {
+        "enabled": true,
+        "description": "Structure-confirmed long using Fibonacci + H4 context, only on BUY days"
+      },
+      "gain_sell": {
+        "enabled": true,
+        "description": "Structure-confirmed short using Fibonacci + H4 context, only on SELL days"
+      }
     }
+  },
+  "daily_bias": {
+    "small_body_rule": "longest_wick_gt_body",
+    "epsilon_wick_ratio": 0.05,
+    "halt_on_neutral": true,
+    "comment": "Evaluate once at 16:00 COL. SELL day if small body and lower_wick > body. BUY day if small body and upper_wick > body. Else NEUTRAL."
+  },
+  "trend_filters": {
+    "timeframes_to_check": ["H1", "M30", "M15"],
+    "equality_is_not_trend": true,
+    "comment": "Green snake = close >= EMA100. Red snake = close < EMA100. Require alignment on H1/M30/M15 matching bot direction."
+  },
+  "structure_checks": {
+    "h4_candidates": 3,
+    "require_h4_covers_fib50": true,
+    "comment": "For GAIN bots: select largest-body H4 candle among last N. Trade only if Fib50 lies inside that H4 range."
+  },
+  "entry_m1": {
+    "require_cross_then_touch": true,
+    "touch_requires_close_on_side": true,
+    "max_bars_between_cross_and_touch": 20,
+    "execute_on_next_bar_open": true,
+    "comment": "M1 entry primitive: (1) close crosses EMA10, (2) later touch EMA10 while on snake side, (3) execute at next bar open"
+  },
+  "exits": {
+    "time_exit_minutes": null,
+    "early_exit_on_m5_purple_break": true,
+    "comment": "Fixed profit only (no time exit). Early exit if M5 closes against purple (BUY: below EMA10, SELL: above EMA10)"
+  },
+  "day_stops": {
+    "pain_sell_50pct_wick_stop": true,
+    "gain_bots_use_wick_stop": false,
+    "comment": "PAIN SELL only: if today_low <= (base_low - 0.5 * lower_wick), halt new trades until next 16:00"
   },
   "indicators": {
     "snake": {
-      "period": 50,
+      "period": 100,
       "type": "EMA",
-      "description": "Primary trend indicator - EMA 100"
+      "description": "Primary trend indicator - EMA 100 (TEMPLATE-LOCKED, user-adjustable via UI)"
     },
     "purple_line": {
       "period": 10,
       "type": "EMA",
-      "description": "Entry signal indicator - EMA 10"
+      "description": "Entry signal indicator - EMA 10 (TEMPLATE-LOCKED, user-adjustable via UI)"
     },
     "rsi": {
       "period": 14,
