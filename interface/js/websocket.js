@@ -120,6 +120,26 @@ class WebSocketManager {
                     AppState.currentTimeframe = data.timeframe;
                     break;
 
+                case 'bot_status':
+                    // Update bot status panel
+                    if (window.updateBotStatus) {
+                        window.updateBotStatus(data);
+                    }
+                    break;
+
+                case 'trade_executed':
+                    // Show notification for trade execution
+                    console.log(`✅ Trade Executed: ${data.bot_type} ${data.symbol} @ ${data.price}`);
+                    this.showNotification(`Trade Executed: ${data.bot_type} on ${data.symbol}`, 'success');
+                    break;
+
+                case 'trade_closed':
+                    // Show notification for trade closure
+                    const profitSign = data.profit >= 0 ? '+' : '';
+                    console.log(`🔴 Trade Closed: ${data.bot_type} ${data.symbol} ${profitSign}$${data.profit.toFixed(2)}`);
+                    this.showNotification(`Trade Closed: ${data.bot_type} ${profitSign}$${data.profit.toFixed(2)}`, data.profit >= 0 ? 'success' : 'error');
+                    break;
+
                 case 'error':
                     console.error('[websocket] Server error:', data.message || data.error || 'Unknown error');
                     if (data.message) {
@@ -182,5 +202,13 @@ class WebSocketManager {
 
     isConnected() {
         return this.ws && this.ws.readyState === WebSocket.OPEN;
+    }
+
+    showNotification(message, type = 'info') {
+        // Simple notification using browser notification API or console
+        console.log(`[${type.toUpperCase()}] ${message}`);
+
+        // You can also add a visual notification in the UI if desired
+        // For now, just log to console
     }
 }

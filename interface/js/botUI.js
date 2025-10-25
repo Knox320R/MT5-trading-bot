@@ -49,9 +49,8 @@ function updateBotStatus(data) {
     };
 
     // Update each bot status
-    for (const [botKey, result] of Object.entries(botResults)) {
-        const botName = botKey.value || botKey; // Handle enum or string
-
+    for (const [botName, result] of Object.entries(botResults)) {
+        // botName is now a string (e.g., 'pain_buy', 'pain_sell')
         if (!botMap[botName]) continue;
 
         const card = document.getElementById(botMap[botName].cardId);

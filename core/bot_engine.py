@@ -53,7 +53,7 @@ class BotEngine:
 
         # Initialize all services
         self.tz_handler = TimezoneHandler(
-            timezone=config.get('environment', {}).get('timezone', 'America/Bogota'),
+            timezone=config.get_environment_timezone(),
             daily_close_hour=16
         )
 
@@ -61,24 +61,24 @@ class BotEngine:
 
         self.daily_bias = DailyBiasService(
             self.tz_handler,
-            epsilon=config.get('daily_bias', {}).get('epsilon_wick_ratio', 0.05)
+            epsilon=config.get_daily_bias_epsilon()
         )
 
         # Get indicator periods (user-adjustable)
-        snake_period = config.get('indicators', {}).get('snake', {}).get('period', 100)
-        purple_period = config.get('indicators', {}).get('purple_line', {}).get('period', 10)
+        snake_period = config.get_snake_period()
+        purple_period = config.get_purple_line_period()
 
         self.indicator_calc = IndicatorCalculator(snake_period, purple_period)
 
-        equality_is_not_trend = config.get('trend_filters', {}).get('equality_is_not_trend', True)
+        equality_is_not_trend = config.get_equality_is_not_trend()
         self.trend_filter = TrendFilterService(self.indicator_calc, equality_is_not_trend)
 
         self.m30_break = M30BreakDetector()
 
-        max_bars_between = config.get('entry_m1', {}).get('max_bars_between_cross_and_touch', 20)
+        max_bars_between = config.get_max_bars_between_cross_and_touch()
         self.m1_state = M1StateMachine(max_bars_between)
 
-        h4_candidates = config.get('structure_checks', {}).get('h4_candidates', 3)
+        h4_candidates = config.get_h4_candidates()
         self.fib_checker = FibonacciChecker(h4_candidates)
 
         # Bot states per symbol

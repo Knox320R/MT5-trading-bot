@@ -94,12 +94,12 @@ class MT5Connector:
             return None
 
         return {
-            'time': datetime.fromtimestamp(tick.time).strftime('%Y-%m-%d %H:%M:%S'),
-            'bid': tick.bid,
-            'ask': tick.ask,
-            'last': tick.last,
-            'volume': tick.volume,
-            'spread': (tick.ask - tick.bid)
+            'time': datetime.fromtimestamp(tick.time),
+            'bid': float(tick.bid),
+            'ask': float(tick.ask),
+            'last': float(tick.last),
+            'volume': int(tick.volume),
+            'spread': float(tick.ask - tick.bid)
         }
 
     def get_bars(self, symbol, timeframe=None, count=None):
@@ -133,12 +133,12 @@ class MT5Connector:
         bars = []
         for rate in rates:
             bars.append({
-                'time': datetime.fromtimestamp(rate['time']).strftime('%Y-%m-%d %H:%M:%S'),
-                'open': rate['open'],
-                'high': rate['high'],
-                'low': rate['low'],
-                'close': rate['close'],
-                'volume': rate['tick_volume']
+                'time': datetime.fromtimestamp(rate['time']),
+                'open': float(rate['open']),
+                'high': float(rate['high']),
+                'low': float(rate['low']),
+                'close': float(rate['close']),
+                'volume': int(rate['tick_volume'])
             })
 
         return bars
@@ -170,14 +170,15 @@ class MT5Connector:
         bars = []
         for rate in rates:
             bars.append({
-                'time': datetime.fromtimestamp(rate['time']).strftime('%Y-%m-%d %H:%M:%S'),
-                'open': rate['open'],
-                'high': rate['high'],
-                'low': rate['low'],
-                'close': rate['close'],
-                'tick_volume': rate['tick_volume'],
-                'spread': rate['spread'],
-                'real_volume': rate['real_volume']
+                'time': datetime.fromtimestamp(rate['time']),
+                'open': float(rate['open']),
+                'high': float(rate['high']),
+                'low': float(rate['low']),
+                'close': float(rate['close']),
+                'volume': int(rate['tick_volume']),
+                'tick_volume': int(rate['tick_volume']),
+                'spread': int(rate['spread']),
+                'real_volume': int(rate['real_volume'])
             })
 
         return bars
@@ -195,15 +196,15 @@ class MT5Connector:
         for pos in positions:
             result.append({
                 'ticket': pos.ticket,
-                'time': datetime.fromtimestamp(pos.time).strftime('%Y-%m-%d %H:%M:%S'),
+                'time': datetime.fromtimestamp(pos.time),
                 'type': 'BUY' if pos.type == 0 else 'SELL',
                 'symbol': pos.symbol,
-                'volume': pos.volume,
-                'price_open': pos.price_open,
-                'price_current': pos.price_current,
-                'sl': pos.sl,
-                'tp': pos.tp,
-                'profit': pos.profit,
+                'volume': float(pos.volume),
+                'price_open': float(pos.price_open),
+                'price_current': float(pos.price_current),
+                'sl': float(pos.sl),
+                'tp': float(pos.tp),
+                'profit': float(pos.profit),
                 'comment': pos.comment
             })
 

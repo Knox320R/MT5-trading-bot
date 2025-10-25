@@ -49,7 +49,7 @@ class OrderManager:
             - error: Error message if failed
         """
         # Get lot size from config
-        lot_size = config.get('trading', {}).get('lot_size', 0.10)
+        lot_size = config.get_lot_size()
 
         # Get current price
         tick = self.connector.get_current_tick(symbol)
@@ -73,7 +73,7 @@ class OrderManager:
 
         # Calculate stop loss and take profit
         # For fixed profit target
-        target_usd = config.get('trading', {}).get('trade_target_usd', 2.0)
+        target_usd = config.get_trade_target_usd()
 
         # Calculate TP in points
         # Profit = (TP - Entry) * Contract_Size * Lot_Size
@@ -96,7 +96,7 @@ class OrderManager:
             "price": price,
             "sl": sl_price,
             "tp": tp_price,
-            "deviation": config.get('trading', {}).get('max_slippage_pips', 2) * 10,  # Convert pips to points
+            "deviation": config.get_max_slippage_pips() * 10,  # Convert pips to points
             "magic": 234000,
             "comment": f"{bot_type}|{reason[:20]}",
             "type_time": mt5.ORDER_TIME_GTC,
@@ -157,7 +157,7 @@ class OrderManager:
             Dictionary with success/error info
         """
         # Get lot size from config
-        lot_size = config.get('trading', {}).get('lot_size', 0.10)
+        lot_size = config.get_lot_size()
 
         # Get current price
         tick = self.connector.get_current_tick(symbol)
@@ -180,7 +180,7 @@ class OrderManager:
         point = symbol_info['point']
 
         # Calculate stop loss and take profit
-        target_usd = config.get('trading', {}).get('trade_target_usd', 2.0)
+        target_usd = config.get_trade_target_usd()
 
         contract_size = symbol_info.get('trade_contract_size', 1.0)
         tp_distance = target_usd / (contract_size * lot_size)
@@ -200,7 +200,7 @@ class OrderManager:
             "price": price,
             "sl": sl_price,
             "tp": tp_price,
-            "deviation": config.get('trading', {}).get('max_slippage_pips', 2) * 10,
+            "deviation": config.get_max_slippage_pips() * 10,
             "magic": 234000,
             "comment": f"{bot_type}|{reason[:20]}",
             "type_time": mt5.ORDER_TIME_GTC,
@@ -302,7 +302,7 @@ class OrderManager:
             "type": close_type,
             "position": ticket,
             "price": close_price,
-            "deviation": config.get('trading', {}).get('max_slippage_pips', 2) * 10,
+            "deviation": config.get_max_slippage_pips() * 10,
             "magic": 234000,
             "comment": f"close|{reason[:20]}",
             "type_time": mt5.ORDER_TIME_GTC,

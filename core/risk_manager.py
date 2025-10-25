@@ -92,12 +92,12 @@ class RiskManager:
 
     def _check_session_active(self) -> Dict:
         """Check if within trading hours"""
-        session_config = config.get('session', {})
-        if not session_config.get('enabled', True):
+        if not config.get_session_enabled():
             return {'allowed': True, 'reason': 'Session checking disabled'}
 
-        start_time = session_config.get('trading_hours', {}).get('start', '19:00')
-        end_time = session_config.get('trading_hours', {}).get('end', '06:00')
+        trading_hours = config.get_trading_hours()
+        start_time = trading_hours.get('start', '19:00')
+        end_time = trading_hours.get('end', '06:00')
 
         in_session = self.tz_handler.is_within_trading_hours(start_time, end_time)
 
@@ -121,7 +121,7 @@ class RiskManager:
 
     def _check_spread(self, symbol: str) -> Dict:
         """Check if spread is within acceptable limits"""
-        max_spread_pips = config.get('trading', {}).get('max_spread_pips', 2.0)
+        max_spread_pips = config.get_max_spread_pips()
 
         symbol_info = self.connector.get_symbol_info(symbol)
         if not symbol_info:
@@ -148,11 +148,10 @@ class RiskManager:
 
     def _check_daily_profit(self, symbol: str) -> Dict:
         """Check if daily profit target reached"""
-        risk_config = config.get('risk_management', {})
-        if not risk_config.get('enable_daily_target', True):
+        if not config.is_daily_target_enabled():
             return {'allowed': True, 'reason': 'Daily target checking disabled'}
 
-        target_usd = config.get('trading', {}).get('daily_target_usd', 100.0)
+        target_usd = config.get_daily_target_usd()
 
         # Get daily stats
         stats = self._get_daily_stats(symbol)
@@ -169,11 +168,10 @@ class RiskManager:
 
     def _check_daily_loss(self, symbol: str) -> Dict:
         """Check if daily loss limit breached"""
-        risk_config = config.get('risk_management', {})
-        if not risk_config.get('enable_daily_stop', True):
+        if not config.is_daily_stop_enabled():
             return {'allowed': True, 'reason': 'Daily stop checking disabled'}
 
-        limit_usd = config.get('trading', {}).get('daily_stop_usd', 40.0)
+        limit_usd = config.get_daily_stop_usd()
 
         # Get daily stats
         stats = self._get_daily_stats(symbol)
@@ -190,7 +188,7 @@ class RiskManager:
 
     def _check_consecutive_orders(self, symbol: str) -> Dict:
         """Check if max consecutive orders exceeded"""
-        max_orders = config.get('trading', {}).get('max_concurrent_orders', 3)
+        max_orders = config.get_max_concurrent_orders()
 
         # Get current open positions for symbol
         positions = self.connector.get_positions(symbol) if hasattr(self.connector, 'get_positions') else []

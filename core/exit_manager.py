@@ -112,7 +112,7 @@ class ExitManager:
             Exit signal dict or None
         """
         # Check if early exit is enabled
-        if not config.get('exits', {}).get('early_exit_on_m5_purple_break', True):
+        if not config.get_early_exit_on_m5_purple_break():
             return None
 
         position_type = position['type']

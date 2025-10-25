@@ -48,10 +48,25 @@ class Config:
         print(f"Configuration saved to {config_path}")
 
     def get(self, *keys, default=None) -> Any:
-        """Get configuration value using dot notation or multiple keys"""
+        """
+        Get configuration value using dot notation or multiple keys.
+
+        Usage:
+            config.get('environment', 'timezone', default='America/Bogota')
+            config.get('trading', 'lot_size', default=0.10)
+
+        Note: default must be passed as keyword argument, not positional.
+        """
         data = self._config_data
 
         for key in keys:
+            # Validate that key is hashable (string or int)
+            if not isinstance(key, (str, int)):
+                raise TypeError(
+                    f"Config keys must be strings or integers, got {type(key).__name__}. "
+                    f"If you meant to pass a default value, use default=... as keyword argument."
+                )
+
             if isinstance(data, dict) and key in data:
                 data = data[key]
             else:
@@ -249,6 +264,72 @@ class Config:
     def reload(self):
         """Reload configuration from file"""
         self.load_config()
+
+    # Bot Engine specific methods
+    def get_bot_engine_enabled_bots(self):
+        """Get list of enabled bot names"""
+        bots = self.get('bot_engine', 'bots', default={})
+        return [bot_name for bot_name, bot_config in bots.items() if bot_config.get('enabled', True)]
+
+    def get_daily_bias_small_body_rule(self):
+        """Get small body rule"""
+        return self.get('daily_bias', 'small_body_rule', default='longest_wick_gt_body')
+
+    def get_daily_bias_epsilon(self):
+        """Get epsilon for wick ratio"""
+        return self.get('daily_bias', 'epsilon_wick_ratio', default=0.05)
+
+    def get_trend_filter_timeframes(self):
+        """Get timeframes to check for trend alignment"""
+        return self.get('trend_filters', 'timeframes_to_check', default=['H1', 'M30', 'M15'])
+
+    def get_equality_is_not_trend(self):
+        """Check if equality should be treated as not trend"""
+        return self.get('trend_filters', 'equality_is_not_trend', default=True)
+
+    def get_h4_candidates(self):
+        """Get number of H4 candles to check"""
+        return self.get('structure_checks', 'h4_candidates', default=3)
+
+    def get_max_bars_between_cross_and_touch(self):
+        """Get max bars allowed between cross and touch"""
+        return self.get('entry_m1', 'max_bars_between_cross_and_touch', default=20)
+
+    def get_early_exit_on_m5_purple_break(self):
+        """Check if M5 purple break early exit is enabled"""
+        return self.get('exits', 'early_exit_on_m5_purple_break', default=True)
+
+    def get_pain_sell_50pct_wick_stop(self):
+        """Check if PAIN SELL 50% wick stop is enabled"""
+        return self.get('day_stops', 'pain_sell_50pct_wick_stop', default=True)
+
+    def get_max_concurrent_orders(self):
+        """Get maximum concurrent orders allowed"""
+        return self.get('trading', 'max_concurrent_orders', default=3)
+
+    def get_trade_target_usd(self):
+        """Get fixed profit target in USD"""
+        return self.get('trading', 'trade_target_usd', default=2.0)
+
+    def get_max_spread_pips(self):
+        """Get maximum allowed spread in pips"""
+        return self.get('trading', 'max_spread_pips', default=2.0)
+
+    def get_max_slippage_pips(self):
+        """Get maximum allowed slippage in pips"""
+        return self.get('trading', 'max_slippage_pips', default=2.0)
+
+    def get_trading_hours(self):
+        """Get trading hours"""
+        return self.get('session', 'trading_hours', default={'start': '19:00', 'end': '06:00'})
+
+    def get_session_enabled(self):
+        """Check if session time filter is enabled"""
+        return self.get('session', 'enabled', default=True)
+
+    def get_environment_timezone(self):
+        """Get environment timezone"""
+        return self.get('environment', 'timezone', default='America/Bogota')
 
 
 # Create a global instance

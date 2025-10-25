@@ -14,6 +14,7 @@ from .order_manager import OrderManager
 from .exit_manager import ExitManager
 from .trade_logger import TradeLogger
 from .timezone_handler import TimezoneHandler
+from .risk_manager import RiskManager
 
 # Set Windows-specific event loop policy
 if hasattr(asyncio, 'WindowsSelectorEventLoopPolicy'):
@@ -32,13 +33,14 @@ class RealtimeDataServer:
 
         # Initialize bot engine components
         self.tz_handler = TimezoneHandler(
-            timezone=config.get('environment', {}).get('timezone', 'America/Bogota'),
+            timezone=config.get_environment_timezone(),
             daily_close_hour=16
         )
         self.bot_engine = BotEngine(self.connector)
         self.order_manager = OrderManager(self.connector, self.tz_handler)
         self.exit_manager = ExitManager(self.order_manager, self.bot_engine.indicator_calc)
         self.trade_logger = TradeLogger(self.tz_handler)
+        self.risk_manager = RiskManager(self.tz_handler, self.connector)
 
         # Track bot states for UI
         self.bot_states = {}  # symbol -> bot results
@@ -47,7 +49,7 @@ class RealtimeDataServer:
         """Register a new WebSocket client"""
         try:
             self.clients.add(websocket)
-            print(f"✓ Client connected. Total clients: {len(self.clients)}")
+            print(f"[OK] Client connected. Total clients: {len(self.clients)}")
 
             # Send initial config to client
             config_data = {
@@ -71,9 +73,9 @@ class RealtimeDataServer:
             }
             print(f"  Sending initial config...")
             await websocket.send(json.dumps(config_data))
-            print(f"  ✓ Config sent successfully")
+            print(f"  [OK] Config sent successfully")
         except Exception as e:
-            print(f"✗ Error registering client: {e}")
+            print(f"[ERROR] Error registering client: {e}")
             import traceback
             traceback.print_exc()
 
@@ -83,17 +85,27 @@ class RealtimeDataServer:
         print(f"Client disconnected. Total clients: {len(self.clients)}")
 
     def convert_to_json_serializable(self, obj):
-        """Convert numpy types to native Python types for JSON serialization"""
+        """Convert numpy types and enums to native Python types for JSON serialization"""
+        from enum import Enum
+
         if isinstance(obj, dict):
-            return {key: self.convert_to_json_serializable(value) for key, value in obj.items()}
+            # Convert enum keys to their values
+            return {
+                (key.value if isinstance(key, Enum) else key): self.convert_to_json_serializable(value)
+                for key, value in obj.items()
+            }
         elif isinstance(obj, list):
             return [self.convert_to_json_serializable(item) for item in obj]
+        elif isinstance(obj, Enum):
+            return obj.value
         elif isinstance(obj, (np.integer, np.int64, np.uint64)):
             return int(obj)
         elif isinstance(obj, (np.floating, np.float64)):
             return float(obj)
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
+        elif isinstance(obj, datetime):
+            return obj.isoformat()
         else:
             return obj
 
@@ -199,19 +211,19 @@ class RealtimeDataServer:
                             'bars': bars,
                             'bars_count': len(bars)
                         }))
-                        print(f"  ✓ Sent {len(bars)} historical bars")
+                        print(f"  [OK] Sent {len(bars)} historical bars")
                     else:
                         await websocket.send(json.dumps({
                             'type': 'error',
                             'message': f'No historical data available for {symbol} {timeframe}'
                         }))
-                        print(f"  ✗ No data available")
+                        print(f"  [ERROR] No data available")
                 except Exception as e:
                     await websocket.send(json.dumps({
                         'type': 'error',
                         'message': f'Error fetching historical data: {str(e)}'
                     }))
-                    print(f"  ✗ Error: {e}")
+                    print(f"  [ERROR] Error: {e}")
 
             elif command == 'set_indicator_period':
                 # Update indicator periods (from UI range inputs)
@@ -264,7 +276,7 @@ class RealtimeDataServer:
                             'type': 'error',
                             'message': f'Symbol {symbol} not found'
                         }))
-                        print(f"  ✗ Symbol not found: {symbol}")
+                        print(f"  [ERROR] Symbol not found: {symbol}")
                         return
 
                     # Get current price
@@ -274,7 +286,7 @@ class RealtimeDataServer:
                             'type': 'error',
                             'message': f'Could not get price for {symbol}'
                         }))
-                        print(f"  ✗ Could not get price")
+                        print(f"  [ERROR] Could not get price")
                         return
 
                     # Determine order type and price
@@ -310,7 +322,7 @@ class RealtimeDataServer:
                             'type': 'error',
                             'message': f'Trade failed: {result.comment}'
                         }))
-                        print(f"  ✗ Trade failed: {result.retcode} - {result.comment}")
+                        print(f"  [ERROR] Trade failed: {result.retcode} - {result.comment}")
                     else:
                         await websocket.send(json.dumps({
                             'type': 'trade_success',
@@ -322,14 +334,14 @@ class RealtimeDataServer:
                                 'action': action
                             }
                         }))
-                        print(f"  ✓ Trade executed: Order #{result.order}, {action.upper()} {result.volume} {symbol} @ {result.price}")
+                        print(f"  [OK] Trade executed: Order #{result.order}, {action.upper()} {result.volume} {symbol} @ {result.price}")
 
                 except Exception as e:
                     await websocket.send(json.dumps({
                         'type': 'error',
                         'message': f'Error executing trade: {str(e)}'
                     }))
-                    print(f"  ✗ Error: {e}")
+                    print(f"  [ERROR] Error: {e}")
 
         except Exception as e:
             print(f"Error handling client message: {e}")
@@ -344,7 +356,7 @@ class RealtimeDataServer:
         except websockets.exceptions.ConnectionClosed as e:
             print(f"Connection closed: {e}")
         except Exception as e:
-            print(f"✗ WebSocket handler error: {e}")
+            print(f"[ERROR] WebSocket handler error: {e}")
             import traceback
             traceback.print_exc()
         finally:
@@ -403,6 +415,11 @@ class RealtimeDataServer:
                             bot_type_str = bot_type.value
                             order_type = 'buy' if 'buy' in bot_type_str else 'sell'
 
+                            risk_check = self.risk_manager.check_all_gates(symbol, order_type)
+                            if not risk_check['allowed']:
+                                print(f"⚠️  {bot_type_str} BLOCKED by risk gates: {', '.join(risk_check['reasons'])}")
+                                continue
+
                             # Execute order
                             if 'buy' in bot_type_str:
                                 entry_result = self.order_manager.execute_buy(
@@ -455,6 +472,9 @@ class RealtimeDataServer:
                         for exit_info in exits:
                             print(f"🔴 EXIT: {self.exit_manager.get_exit_summary(exit_info)}")
 
+                            # Record profit/loss for risk tracking
+                            self.risk_manager.record_trade_result(symbol, exit_info['profit'])
+
                             # Log trade exit
                             self.trade_logger.log_trade_exit(
                                 symbol, exit_info['bot_type'], exit_info,
@@ -485,7 +505,7 @@ class RealtimeDataServer:
                 await asyncio.sleep(2)
 
             except Exception as e:
-                print(f"✗ Error in bot engine loop: {e}")
+                print(f"[ERROR] Error in bot engine loop: {e}")
                 import traceback
                 traceback.print_exc()
                 await asyncio.sleep(5)
@@ -564,7 +584,7 @@ class RealtimeDataServer:
                 await asyncio.sleep(self.update_interval)
 
             except Exception as e:
-                print(f"✗ Error in market data stream: {e}")
+                print(f"[ERROR] Error in market data stream: {e}")
                 import traceback
                 traceback.print_exc()
                 await asyncio.sleep(5)
@@ -621,7 +641,7 @@ class RealtimeDataServer:
             if chrome_path:
                 webbrowser.register('chrome', None, webbrowser.BackgroundBrowser(chrome_path))
                 webbrowser.get('chrome').open(dashboard_url)
-                print(f"✓ Opened in Chrome")
+                print(f"[OK] Opened in Chrome")
             else:
                 print("Chrome not found, using default browser...")
                 webbrowser.open(dashboard_url)
