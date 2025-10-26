@@ -214,30 +214,54 @@ class BotEngine:
 
         # 1. BUY day only
         if bias == 'BUY':
-            reasons.append("✓ BUY day")
+            reasons.append({
+                'text': "✓ BUY day",
+                'detail': "Yesterday's D1 candle has a long lower wick indicating buyers rejected lower prices"
+            })
         else:
-            reasons.append(f"✗ Not a BUY day (bias: {bias})")
+            reasons.append({
+                'text': f"✗ Not a BUY day (bias: {bias})",
+                'detail': f"Daily bias is {bias}. PAIN BUY requires a BUY day (long lower wick on yesterday's D1 candle)"
+            })
             ready = False
 
         # 2. Trend alignment (H1, M30, M15 green)
         if trend['aligned']:
-            reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+            reasons.append({
+                'text': "✓ Trend aligned (H1/M30/M15 green)",
+                'detail': "All three timeframes (H1, M30, M15) have price above Snake (EMA100), confirming uptrend"
+            })
         else:
-            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            reasons.append({
+                'text': f"✗ Trend not aligned: {', '.join(trend['missing'])}",
+                'detail': f"Need all timeframes green (price > EMA100). Current: {', '.join(trend['missing'])}"
+            })
             ready = False
 
         # 3. M30 clean break above snake
         if self.m30_break.check_upward_break(symbol, m30_bars, m30_snake):
-            reasons.append("✓ M30 clean break above snake")
+            reasons.append({
+                'text': "✓ M30 clean break above snake",
+                'detail': "M30 candle closed above Snake (EMA100) and held for required persistence"
+            })
         else:
-            reasons.append("✗ M30: No clean break above snake")
+            reasons.append({
+                'text': "✗ M30: No clean break above snake",
+                'detail': "Need M30 candle to close above Snake (EMA100) and hold for persistence bars"
+            })
             ready = False
 
         # 4. M1 cross-then-touch
         if self.m1_state.is_buy_signal(symbol):
-            reasons.append("✓ M1 cross-then-touch BUY signal")
+            reasons.append({
+                'text': "✓ M1 cross-then-touch BUY signal",
+                'detail': "M1 crossed above Purple line (EMA10) then touched it again from above"
+            })
         else:
-            reasons.append("✗ M1: No cross-then-touch BUY signal")
+            reasons.append({
+                'text': "✗ M1: No cross-then-touch BUY signal",
+                'detail': "Need M1 to cross above Purple (EMA10), then touch it again from above within max bars"
+            })
             ready = False
 
         return {'ready': ready, 'reasons': reasons}
@@ -252,37 +276,67 @@ class BotEngine:
         # Check if halted (always show this first)
         is_halted = self.bot_states[symbol][BotType.PAIN_SELL]['state'] == BotState.HALTED
         if is_halted:
-            reasons.append("✗ HALTED: Day-stop triggered")
+            reasons.append({
+                'text': "✗ HALTED: Day-stop triggered",
+                'detail': "Today's low breached 50% of yesterday's lower wick - PAIN SELL halted for the day"
+            })
             ready = False
         else:
-            reasons.append("✓ Not halted")
+            reasons.append({
+                'text': "✓ Not halted",
+                'detail': "Day-stop not triggered (today's low hasn't breached 50% of yesterday's lower wick)"
+            })
 
         # 1. SELL day only
         if bias == 'SELL':
-            reasons.append("✓ SELL day")
+            reasons.append({
+                'text': "✓ SELL day",
+                'detail': "Yesterday's D1 candle has a long upper wick indicating sellers rejected higher prices"
+            })
         else:
-            reasons.append(f"✗ Not a SELL day (bias: {bias})")
+            reasons.append({
+                'text': f"✗ Not a SELL day (bias: {bias})",
+                'detail': f"Daily bias is {bias}. PAIN SELL requires a SELL day (long upper wick on yesterday's D1 candle)"
+            })
             ready = False
 
         # 2. Trend alignment (H1, M30, M15 red)
         if trend['aligned']:
-            reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+            reasons.append({
+                'text': "✓ Trend aligned (H1/M30/M15 red)",
+                'detail': "All three timeframes (H1, M30, M15) have price below Snake (EMA100), confirming downtrend"
+            })
         else:
-            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            reasons.append({
+                'text': f"✗ Trend not aligned: {', '.join(trend['missing'])}",
+                'detail': f"Need all timeframes red (price < EMA100). Current: {', '.join(trend['missing'])}"
+            })
             ready = False
 
         # 3. M30 clean break below snake
         if self.m30_break.check_downward_break(symbol, m30_bars, m30_snake):
-            reasons.append("✓ M30 clean break below snake")
+            reasons.append({
+                'text': "✓ M30 clean break below snake",
+                'detail': "M30 candle closed below Snake (EMA100) and held for required persistence"
+            })
         else:
-            reasons.append("✗ M30: No clean break below snake")
+            reasons.append({
+                'text': "✗ M30: No clean break below snake",
+                'detail': "Need M30 candle to close below Snake (EMA100) and hold for persistence bars"
+            })
             ready = False
 
         # 4. M1 cross-then-touch
         if self.m1_state.is_sell_signal(symbol):
-            reasons.append("✓ M1 cross-then-touch SELL signal")
+            reasons.append({
+                'text': "✓ M1 cross-then-touch SELL signal",
+                'detail': "M1 crossed below Purple line (EMA10) then touched it again from below"
+            })
         else:
-            reasons.append("✗ M1: No cross-then-touch SELL signal")
+            reasons.append({
+                'text': "✗ M1: No cross-then-touch SELL signal",
+                'detail': "Need M1 to cross below Purple (EMA10), then touch it again from below within max bars"
+            })
             ready = False
 
         return {'ready': ready, 'reasons': reasons}
@@ -296,31 +350,55 @@ class BotEngine:
 
         # 1. BUY day only
         if bias == 'BUY':
-            reasons.append("✓ BUY day")
+            reasons.append({
+                'text': "✓ BUY day",
+                'detail': "Yesterday's D1 candle has a long lower wick indicating buyers rejected lower prices"
+            })
         else:
-            reasons.append(f"✗ Not a BUY day (bias: {bias})")
+            reasons.append({
+                'text': f"✗ Not a BUY day (bias: {bias})",
+                'detail': f"Daily bias is {bias}. GAIN BUY requires a BUY day (long lower wick on yesterday's D1 candle)"
+            })
             ready = False
 
         # 2. Structure check (M15 + H4 Fibonacci)
         structure = self.fib_checker.check_gain_buy_structure(m15_bars, h4_bars)
         if structure['valid']:
-            reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+            reasons.append({
+                'text': f"✓ Structure valid (Fib50: {structure['fib50']:.5f})",
+                'detail': f"M15 has valid swing low and H4's largest body candle covers Fib 50% at {structure['fib50']:.5f}"
+            })
         else:
-            reasons.append(f"✗ Structure: {structure['reason']}")
+            reasons.append({
+                'text': f"✗ Structure: {structure['reason']}",
+                'detail': "Need M15 swing low (3-bar pattern) and H4 largest-body candle covering Fib 50% level"
+            })
             ready = False
 
         # 3. Trend alignment (H1, M30, M15 green)
         if trend['aligned']:
-            reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+            reasons.append({
+                'text': "✓ Trend aligned (H1/M30/M15 green)",
+                'detail': "All three timeframes (H1, M30, M15) have price above Snake (EMA100), confirming uptrend"
+            })
         else:
-            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            reasons.append({
+                'text': f"✗ Trend not aligned: {', '.join(trend['missing'])}",
+                'detail': f"Need all timeframes green (price > EMA100). Current: {', '.join(trend['missing'])}"
+            })
             ready = False
 
         # 4. M1 cross-then-touch (same as PAIN BUY)
         if self.m1_state.is_buy_signal(symbol):
-            reasons.append("✓ M1 cross-then-touch BUY signal")
+            reasons.append({
+                'text': "✓ M1 cross-then-touch BUY signal",
+                'detail': "M1 crossed above Purple line (EMA10) then touched it again from above"
+            })
         else:
-            reasons.append("✗ M1: No cross-then-touch BUY signal")
+            reasons.append({
+                'text': "✗ M1: No cross-then-touch BUY signal",
+                'detail': "Need M1 to cross above Purple (EMA10), then touch it again from above within max bars"
+            })
             ready = False
 
         return {'ready': ready, 'reasons': reasons}
@@ -334,31 +412,55 @@ class BotEngine:
 
         # 1. SELL day only
         if bias == 'SELL':
-            reasons.append("✓ SELL day")
+            reasons.append({
+                'text': "✓ SELL day",
+                'detail': "Yesterday's D1 candle has a long upper wick indicating sellers rejected higher prices"
+            })
         else:
-            reasons.append(f"✗ Not a SELL day (bias: {bias})")
+            reasons.append({
+                'text': f"✗ Not a SELL day (bias: {bias})",
+                'detail': f"Daily bias is {bias}. GAIN SELL requires a SELL day (long upper wick on yesterday's D1 candle)"
+            })
             ready = False
 
         # 2. Structure check (M15 + H4 Fibonacci)
         structure = self.fib_checker.check_gain_sell_structure(m15_bars, h4_bars)
         if structure['valid']:
-            reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+            reasons.append({
+                'text': f"✓ Structure valid (Fib50: {structure['fib50']:.5f})",
+                'detail': f"M15 has valid swing high and H4's largest body candle covers Fib 50% at {structure['fib50']:.5f}"
+            })
         else:
-            reasons.append(f"✗ Structure: {structure['reason']}")
+            reasons.append({
+                'text': f"✗ Structure: {structure['reason']}",
+                'detail': "Need M15 swing high (3-bar pattern) and H4 largest-body candle covering Fib 50% level"
+            })
             ready = False
 
         # 3. Trend alignment (H1, M30, M15 red)
         if trend['aligned']:
-            reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+            reasons.append({
+                'text': "✓ Trend aligned (H1/M30/M15 red)",
+                'detail': "All three timeframes (H1, M30, M15) have price below Snake (EMA100), confirming downtrend"
+            })
         else:
-            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            reasons.append({
+                'text': f"✗ Trend not aligned: {', '.join(trend['missing'])}",
+                'detail': f"Need all timeframes red (price < EMA100). Current: {', '.join(trend['missing'])}"
+            })
             ready = False
 
         # 4. M1 cross-then-touch (same as PAIN SELL)
         if self.m1_state.is_sell_signal(symbol):
-            reasons.append("✓ M1 cross-then-touch SELL signal")
+            reasons.append({
+                'text': "✓ M1 cross-then-touch SELL signal",
+                'detail': "M1 crossed below Purple line (EMA10) then touched it again from below"
+            })
         else:
-            reasons.append("✗ M1: No cross-then-touch SELL signal")
+            reasons.append({
+                'text': "✗ M1: No cross-then-touch SELL signal",
+                'detail': "Need M1 to cross below Purple (EMA10), then touch it again from below within max bars"
+            })
             ready = False
 
         return {'ready': ready, 'reasons': reasons}

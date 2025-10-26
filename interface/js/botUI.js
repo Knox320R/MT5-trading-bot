@@ -80,13 +80,24 @@ function updateBotStatus(data) {
         // Update reasons
         if (result.reasons && result.reasons.length > 0) {
             const formattedReasons = result.reasons.map(reason => {
-                if (reason.includes('✓')) {
-                    return `<span class="check">${reason}</span>`;
-                } else if (reason.includes('✗')) {
-                    return `<span class="cross">${reason}</span>`;
-                } else {
-                    return `<span>${reason}</span>`;
+                // Handle object format with text and detail
+                if (typeof reason === 'object' && reason.text) {
+                    const text = reason.text;
+                    const detail = reason.detail || '';
+                    const cssClass = text.includes('✓') ? 'check' : (text.includes('✗') ? 'cross' : '');
+                    return `<span class="${cssClass}" title="${detail}">${text}</span>`;
                 }
+                // Handle string format (backward compatibility)
+                else if (typeof reason === 'string') {
+                    if (reason.includes('✓')) {
+                        return `<span class="check">${reason}</span>`;
+                    } else if (reason.includes('✗')) {
+                        return `<span class="cross">${reason}</span>`;
+                    } else {
+                        return `<span>${reason}</span>`;
+                    }
+                }
+                return '';
             }).join('<br>');
 
             reasonsElem.innerHTML = formattedReasons;
