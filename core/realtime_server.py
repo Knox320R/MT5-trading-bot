@@ -435,15 +435,24 @@ class RealtimeDataServer:
                                 continue
 
                             # Execute order
+                            # Extract text from reasons (handle both dict and string formats)
+                            reason_texts = []
+                            for r in result['reasons']:
+                                if isinstance(r, dict) and 'text' in r:
+                                    reason_texts.append(r['text'])
+                                elif isinstance(r, str):
+                                    reason_texts.append(r)
+                            reason_str = ' | '.join(reason_texts)
+
                             if 'buy' in bot_type_str:
                                 entry_result = self.order_manager.execute_buy(
                                     symbol, bot_type_str,
-                                    reason=' | '.join(result['reasons'])
+                                    reason=reason_str
                                 )
                             else:
                                 entry_result = self.order_manager.execute_sell(
                                     symbol, bot_type_str,
-                                    reason=' | '.join(result['reasons'])
+                                    reason=reason_str
                                 )
 
                             if entry_result['success']:
