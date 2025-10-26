@@ -7,7 +7,6 @@ import numpy as np
 from datetime import datetime
 from .mt5_connector import MT5Connector
 from .config_loader import config
-from .signal_detector import SignalDetector
 from .csv_recorder import CSVRecorder
 from .bot_engine import BotEngine
 from .order_manager import OrderManager
@@ -28,7 +27,6 @@ class RealtimeDataServer:
         self.current_symbol = config.get_default_symbol()
         self.timeframe = config.get_default_timeframe()
         self.update_interval = config.get_update_interval()
-        self.signal_detector = SignalDetector(self.connector)
         self.csv_recorder = CSVRecorder()
 
         # Initialize bot engine components
@@ -380,8 +378,9 @@ class RealtimeDataServer:
 
                 for symbol in all_symbols:
                     # Get M1 bars for the symbol
+                    # Need 6000+ M1 bars to calculate EMA100 on H1 (100 H1 bars * 60 minutes)
                     import MetaTrader5 as mt5
-                    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 200)
+                    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 7200)
 
                     if rates is None or len(rates) == 0:
                         continue
