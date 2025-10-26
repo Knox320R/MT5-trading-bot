@@ -249,10 +249,13 @@ class BotEngine:
         reasons = []
         ready = True
 
-        # Check if halted
-        if self.bot_states[symbol][BotType.PAIN_SELL]['state'] == BotState.HALTED:
+        # Check if halted (always show this first)
+        is_halted = self.bot_states[symbol][BotType.PAIN_SELL]['state'] == BotState.HALTED
+        if is_halted:
             reasons.append("✗ HALTED: Day-stop triggered")
-            return {'ready': False, 'reasons': reasons}
+            ready = False
+        else:
+            reasons.append("✓ Not halted")
 
         # 1. SELL day only
         if bias == 'SELL':
