@@ -86,19 +86,18 @@ class M1StateMachine:
 
         curr_purple = purple_values[last_idx]
         prev_purple = purple_values[prev_idx]
-        curr_snake = snake_values[last_idx]
 
         # State machine logic
         if state['state'] == EntryState.IDLE:
             # Looking for cross
-            # Upward cross: prev_close < prev_purple AND curr_close > curr_purple
-            if prev_close < prev_purple and curr_close > curr_purple:
+            # Upward cross: prev_close < prev_purple AND curr_close >= curr_purple
+            if prev_close < prev_purple and curr_close >= curr_purple:
                 state['state'] = EntryState.CROSSED_UP
                 state['cross_bar_index'] = last_idx
                 state['cross_direction'] = 'up'
 
-            # Downward cross: prev_close > prev_purple AND curr_close < curr_purple
-            elif prev_close > prev_purple and curr_close < curr_purple:
+            # Downward cross: prev_close > prev_purple AND curr_close <= curr_purple
+            elif prev_close > prev_purple and curr_close <= curr_purple:
                 state['state'] = EntryState.CROSSED_DOWN
                 state['cross_bar_index'] = last_idx
                 state['cross_direction'] = 'down'
@@ -106,7 +105,7 @@ class M1StateMachine:
         elif state['state'] == EntryState.CROSSED_UP:
             # Looking for touch from above
             # Touch: low <= purple <= high
-            # BUY requires: close >= purple AND close >= snake
+            # BUY requires: close >= purple (NO snake check during touch)
             bars_since_cross = last_idx - state['cross_bar_index']
 
             if bars_since_cross > self.max_bars_between:
@@ -116,7 +115,7 @@ class M1StateMachine:
 
             elif curr_low <= curr_purple <= curr_high:
                 # Touch detected
-                if curr_close >= curr_purple and curr_close >= curr_snake:
+                if curr_close >= curr_purple:
                     # Valid BUY touch
                     state['state'] = EntryState.READY_BUY
                     state['ready_bar_index'] = last_idx
@@ -133,7 +132,7 @@ class M1StateMachine:
         elif state['state'] == EntryState.CROSSED_DOWN:
             # Looking for touch from below
             # Touch: low <= purple <= high
-            # SELL requires: close <= purple AND close < snake
+            # SELL requires: close <= purple (NO snake check during touch)
             bars_since_cross = last_idx - state['cross_bar_index']
 
             if bars_since_cross > self.max_bars_between:
@@ -143,7 +142,7 @@ class M1StateMachine:
 
             elif curr_low <= curr_purple <= curr_high:
                 # Touch detected
-                if curr_close <= curr_purple and curr_close < curr_snake:
+                if curr_close <= curr_purple:
                     # Valid SELL touch
                     state['state'] = EntryState.READY_SELL
                     state['ready_bar_index'] = last_idx
