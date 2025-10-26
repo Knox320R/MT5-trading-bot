@@ -93,7 +93,7 @@ def test_mt5_connection():
 
     if connector.connect_from_config():
         account = connector.get_account_info()
-        print(f"✓ Connected successfully!")
+        print(f"[OK] Connected successfully!")
         print(f"  Account: #{account['login']}")
         print(f"  Balance: ${account['balance']}")
         print(f"  Equity:  ${account['equity']}")
@@ -103,16 +103,16 @@ def test_mt5_connection():
         symbol = config.get_default_symbol()
         tick = connector.get_current_tick(symbol)
         if tick:
-            print(f"\n✓ Symbol '{symbol}' accessible")
+            print(f"\n[OK] Symbol '{symbol}' accessible")
             print(f"  Bid: {tick['bid']}")
             print(f"  Ask: {tick['ask']}")
         else:
-            print(f"\n⚠ WARNING: Symbol '{symbol}' not available")
+            print(f"\n[WARNING] Symbol '{symbol}' not available")
 
         connector.disconnect()
         return True
     else:
-        print("✗ Connection failed!")
+        print("[ERROR] Connection failed!")
         print("\nPossible issues:")
         print("  - MetaTrader 5 is not installed")
         print("  - Wrong credentials in config.json")
@@ -141,7 +141,7 @@ async def start_bot(args):
     except KeyboardInterrupt:
         print("\n\nBot stopped by user")
     except Exception as e:
-        print(f"\n✗ Error starting bot: {e}")
+        print(f"\n[ERROR] Error starting bot: {e}")
         import traceback
         traceback.print_exc()
         sys.exit(1)
@@ -178,7 +178,7 @@ def main():
         except OSError as e:
             if e.errno == 10048:  # Port in use
                 if port == ports_to_try[-1]:  # Last port
-                    print(f"\n✗ All ports in use!")
+                    print(f"\n[ERROR] All ports in use!")
                     print(f"Run 'kill_server.bat' to free up ports")
                     sys.exit(1)
                 else:

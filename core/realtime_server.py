@@ -43,6 +43,9 @@ class RealtimeDataServer:
         # Track bot states for UI
         self.bot_states = {}  # symbol -> bot results
 
+        # Data caching to prevent hammering MT5 API
+        self.bars_cache = {}  # symbol -> {'m1': [...], 'd1': [...], 'm5': [...], 'last_update': timestamp}
+
     async def register_client(self, websocket):
         """Register a new WebSocket client"""
         try:
@@ -363,6 +366,60 @@ class RealtimeDataServer:
             except Exception as e:
                 print(f"Error unregistering client: {e}")
 
+    def get_bars_cached(self, symbol, timeframe, count):
+        """Get bars with caching to prevent hammering MT5 API"""
+        import MetaTrader5 as mt5
+        from datetime import datetime
+
+        # Determine cache key
+        tf_key = f"{timeframe}"
+
+        # Check if we have cached data
+        now = datetime.now()
+        if symbol in self.bars_cache and tf_key in self.bars_cache[symbol]:
+            cached = self.bars_cache[symbol][tf_key]
+            last_update = cached.get('last_update')
+
+            # Only refetch if more than 1 minute has passed
+            if last_update and (now - last_update).total_seconds() < 60:
+                return cached['bars']
+
+        # Fetch fresh data
+        if timeframe == 'M1':
+            mt5_tf = mt5.TIMEFRAME_M1
+        elif timeframe == 'M5':
+            mt5_tf = mt5.TIMEFRAME_M5
+        elif timeframe == 'D1':
+            mt5_tf = mt5.TIMEFRAME_D1
+        else:
+            return None
+
+        rates = mt5.copy_rates_from_pos(symbol, mt5_tf, 0, count)
+        if rates is None or len(rates) == 0:
+            return None
+
+        # Convert to bars format
+        bars = []
+        for rate in rates:
+            bars.append({
+                'time': datetime.fromtimestamp(rate['time']),
+                'open': float(rate['open']),
+                'high': float(rate['high']),
+                'low': float(rate['low']),
+                'close': float(rate['close']),
+                'volume': int(rate['tick_volume'])
+            })
+
+        # Update cache
+        if symbol not in self.bars_cache:
+            self.bars_cache[symbol] = {}
+        self.bars_cache[symbol][tf_key] = {
+            'bars': bars,
+            'last_update': now
+        }
+
+        return bars
+
     async def bot_engine_loop(self):
         """Run bot engine for all symbols every 2 seconds"""
         print("Starting bot engine loop...")
@@ -377,40 +434,14 @@ class RealtimeDataServer:
                 all_symbols = config.get_all_symbols()
 
                 for symbol in all_symbols:
-                    # Get M1 bars for the symbol
-                    # Need 6000+ M1 bars to calculate EMA100 on H1 (100 H1 bars * 60 minutes)
-                    import MetaTrader5 as mt5
-                    rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M1, 0, 7200)
-
-                    if rates is None or len(rates) == 0:
+                    # Get M1 bars for the symbol (cached to prevent API overload)
+                    # Need 7200 M1 bars to calculate EMA100 on H1 (100 H1 bars * 60 minutes)
+                    m1_bars = self.get_bars_cached(symbol, 'M1', 7200)
+                    if m1_bars is None or len(m1_bars) == 0:
                         continue
 
-                    # Convert to bars format
-                    m1_bars = []
-                    for rate in rates:
-                        m1_bars.append({
-                            'time': datetime.fromtimestamp(rate['time']),
-                            'open': float(rate['open']),
-                            'high': float(rate['high']),
-                            'low': float(rate['low']),
-                            'close': float(rate['close']),
-                            'volume': int(rate['tick_volume'])
-                        })
-
-                    # Get D1 bars directly from MT5 (uses broker's daily boundary)
-                    d1_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_D1, 0, 10)
-                    d1_bars_mt5 = None
-                    if d1_rates is not None and len(d1_rates) > 0:
-                        d1_bars_mt5 = []
-                        for rate in d1_rates:
-                            d1_bars_mt5.append({
-                                'time': datetime.fromtimestamp(rate['time']),
-                                'open': float(rate['open']),
-                                'high': float(rate['high']),
-                                'low': float(rate['low']),
-                                'close': float(rate['close']),
-                                'volume': int(rate['tick_volume'])
-                            })
+                    # Get D1 bars directly from MT5 (uses broker's daily boundary, cached)
+                    d1_bars_mt5 = self.get_bars_cached(symbol, 'D1', 10)
 
                     # Process through bot engine with MT5 D1 bars
                     bot_results = self.bot_engine.process_symbol(symbol, m1_bars, d1_bars_mt5)
@@ -431,7 +462,7 @@ class RealtimeDataServer:
 
                             risk_check = self.risk_manager.check_all_gates(symbol, order_type, bot_type_str)
                             if not risk_check['allowed']:
-                                print(f"⚠️  {bot_type_str} BLOCKED by risk gates: {', '.join(risk_check['reasons'])}")
+                                print(f"[BLOCKED] {bot_type_str} - Risk gates: {', '.join(risk_check['reasons'])}")
                                 continue
 
                             # Execute order
@@ -456,7 +487,7 @@ class RealtimeDataServer:
                                 )
 
                             if entry_result['success']:
-                                print(f"✅ {bot_type_str} EXECUTED: {symbol} @ {entry_result['price']:.5f}")
+                                print(f"[EXECUTED] {bot_type_str}: {symbol} @ {entry_result['price']:.5f}")
 
                                 # Increment consecutive orders counter
                                 self.risk_manager.increment_consecutive_orders(symbol, bot_type_str)
@@ -477,26 +508,15 @@ class RealtimeDataServer:
                                     'ticket': entry_result['ticket']
                                 })
                             else:
-                                print(f"❌ {bot_type_str} FAILED: {symbol} - {entry_result.get('error')}")
+                                print(f"[FAILED] {bot_type_str}: {symbol} - {entry_result.get('error')}")
 
-                    # Check exits for open positions
-                    m5_rates = mt5.copy_rates_from_pos(symbol, mt5.TIMEFRAME_M5, 0, 20)
-                    if m5_rates is not None and len(m5_rates) > 0:
-                        m5_bars = []
-                        for rate in m5_rates:
-                            m5_bars.append({
-                                'time': datetime.fromtimestamp(rate['time']),
-                                'open': float(rate['open']),
-                                'high': float(rate['high']),
-                                'low': float(rate['low']),
-                                'close': float(rate['close']),
-                                'volume': int(rate['tick_volume'])
-                            })
-
+                    # Check exits for open positions (cached)
+                    m5_bars = self.get_bars_cached(symbol, 'M5', 20)
+                    if m5_bars is not None and len(m5_bars) > 0:
                         exits = self.exit_manager.check_exits(symbol, m5_bars)
 
                         for exit_info in exits:
-                            print(f"🔴 EXIT: {self.exit_manager.get_exit_summary(exit_info)}")
+                            print(f"[EXIT] {self.exit_manager.get_exit_summary(exit_info)}")
 
                             # Record profit/loss for risk tracking (resets consecutive counter if profitable)
                             self.risk_manager.record_trade_result(symbol, exit_info['profit'], exit_info['bot_type'])
