@@ -210,38 +210,36 @@ class BotEngine:
                         tf_indicators: Dict) -> Dict:
         """Check PAIN BUY bot conditions"""
         reasons = []
-        ready = False
+        ready = True
 
         # 1. BUY day only
-        if bias != 'BUY':
-            reasons.append(f"Not a BUY day (bias: {bias})")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ BUY day")
+        if bias == 'BUY':
+            reasons.append("✓ BUY day")
+        else:
+            reasons.append(f"✗ Not a BUY day (bias: {bias})")
+            ready = False
 
         # 2. Trend alignment (H1, M30, M15 green)
-        if not trend['aligned']:
-            reasons.append(f"Trend not aligned: {', '.join(trend['missing'])}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+        if trend['aligned']:
+            reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+        else:
+            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            ready = False
 
         # 3. M30 clean break above snake
-        if not self.m30_break.check_upward_break(symbol, m30_bars, m30_snake):
-            reasons.append("M30: No clean break above snake")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ M30 clean break above snake")
+        if self.m30_break.check_upward_break(symbol, m30_bars, m30_snake):
+            reasons.append("✓ M30 clean break above snake")
+        else:
+            reasons.append("✗ M30: No clean break above snake")
+            ready = False
 
         # 4. M1 cross-then-touch
-        if not self.m1_state.is_buy_signal(symbol):
-            reasons.append("M1: No cross-then-touch BUY signal")
-            return {'ready': False, 'reasons': reasons}
+        if self.m1_state.is_buy_signal(symbol):
+            reasons.append("✓ M1 cross-then-touch BUY signal")
+        else:
+            reasons.append("✗ M1: No cross-then-touch BUY signal")
+            ready = False
 
-        reasons.append("✓ M1 cross-then-touch BUY signal")
-
-        # All conditions met!
-        ready = True
         return {'ready': ready, 'reasons': reasons}
 
     def _check_pain_sell(self, symbol: str, bias: str, trend: Dict,
@@ -249,43 +247,41 @@ class BotEngine:
                          tf_indicators: Dict) -> Dict:
         """Check PAIN SELL bot conditions"""
         reasons = []
-        ready = False
+        ready = True
 
         # Check if halted
         if self.bot_states[symbol][BotType.PAIN_SELL]['state'] == BotState.HALTED:
-            reasons.append("HALTED: Day-stop triggered")
+            reasons.append("✗ HALTED: Day-stop triggered")
             return {'ready': False, 'reasons': reasons}
 
         # 1. SELL day only
-        if bias != 'SELL':
-            reasons.append(f"Not a SELL day (bias: {bias})")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ SELL day")
+        if bias == 'SELL':
+            reasons.append("✓ SELL day")
+        else:
+            reasons.append(f"✗ Not a SELL day (bias: {bias})")
+            ready = False
 
         # 2. Trend alignment (H1, M30, M15 red)
-        if not trend['aligned']:
-            reasons.append(f"Trend not aligned: {', '.join(trend['missing'])}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+        if trend['aligned']:
+            reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+        else:
+            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            ready = False
 
         # 3. M30 clean break below snake
-        if not self.m30_break.check_downward_break(symbol, m30_bars, m30_snake):
-            reasons.append("M30: No clean break below snake")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ M30 clean break below snake")
+        if self.m30_break.check_downward_break(symbol, m30_bars, m30_snake):
+            reasons.append("✓ M30 clean break below snake")
+        else:
+            reasons.append("✗ M30: No clean break below snake")
+            ready = False
 
         # 4. M1 cross-then-touch
-        if not self.m1_state.is_sell_signal(symbol):
-            reasons.append("M1: No cross-then-touch SELL signal")
-            return {'ready': False, 'reasons': reasons}
+        if self.m1_state.is_sell_signal(symbol):
+            reasons.append("✓ M1 cross-then-touch SELL signal")
+        else:
+            reasons.append("✗ M1: No cross-then-touch SELL signal")
+            ready = False
 
-        reasons.append("✓ M1 cross-then-touch SELL signal")
-
-        # All conditions met!
-        ready = True
         return {'ready': ready, 'reasons': reasons}
 
     def _check_gain_buy(self, symbol: str, bias: str, trend: Dict,
@@ -293,39 +289,37 @@ class BotEngine:
                         tf_indicators: Dict) -> Dict:
         """Check GAIN BUY bot conditions"""
         reasons = []
-        ready = False
+        ready = True
 
         # 1. BUY day only
-        if bias != 'BUY':
-            reasons.append(f"Not a BUY day (bias: {bias})")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ BUY day")
+        if bias == 'BUY':
+            reasons.append("✓ BUY day")
+        else:
+            reasons.append(f"✗ Not a BUY day (bias: {bias})")
+            ready = False
 
         # 2. Structure check (M15 + H4 Fibonacci)
         structure = self.fib_checker.check_gain_buy_structure(m15_bars, h4_bars)
-        if not structure['valid']:
-            reasons.append(f"Structure: {structure['reason']}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+        if structure['valid']:
+            reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+        else:
+            reasons.append(f"✗ Structure: {structure['reason']}")
+            ready = False
 
         # 3. Trend alignment (H1, M30, M15 green)
-        if not trend['aligned']:
-            reasons.append(f"Trend not aligned: {', '.join(trend['missing'])}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+        if trend['aligned']:
+            reasons.append("✓ Trend aligned (H1/M30/M15 green)")
+        else:
+            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            ready = False
 
         # 4. M1 cross-then-touch (same as PAIN BUY)
-        if not self.m1_state.is_buy_signal(symbol):
-            reasons.append("M1: No cross-then-touch BUY signal")
-            return {'ready': False, 'reasons': reasons}
+        if self.m1_state.is_buy_signal(symbol):
+            reasons.append("✓ M1 cross-then-touch BUY signal")
+        else:
+            reasons.append("✗ M1: No cross-then-touch BUY signal")
+            ready = False
 
-        reasons.append("✓ M1 cross-then-touch BUY signal")
-
-        # All conditions met!
-        ready = True
         return {'ready': ready, 'reasons': reasons}
 
     def _check_gain_sell(self, symbol: str, bias: str, trend: Dict,
@@ -333,39 +327,37 @@ class BotEngine:
                          tf_indicators: Dict) -> Dict:
         """Check GAIN SELL bot conditions"""
         reasons = []
-        ready = False
+        ready = True
 
         # 1. SELL day only
-        if bias != 'SELL':
-            reasons.append(f"Not a SELL day (bias: {bias})")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ SELL day")
+        if bias == 'SELL':
+            reasons.append("✓ SELL day")
+        else:
+            reasons.append(f"✗ Not a SELL day (bias: {bias})")
+            ready = False
 
         # 2. Structure check (M15 + H4 Fibonacci)
         structure = self.fib_checker.check_gain_sell_structure(m15_bars, h4_bars)
-        if not structure['valid']:
-            reasons.append(f"Structure: {structure['reason']}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+        if structure['valid']:
+            reasons.append(f"✓ Structure valid (Fib50: {structure['fib50']:.5f})")
+        else:
+            reasons.append(f"✗ Structure: {structure['reason']}")
+            ready = False
 
         # 3. Trend alignment (H1, M30, M15 red)
-        if not trend['aligned']:
-            reasons.append(f"Trend not aligned: {', '.join(trend['missing'])}")
-            return {'ready': False, 'reasons': reasons}
-
-        reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+        if trend['aligned']:
+            reasons.append("✓ Trend aligned (H1/M30/M15 red)")
+        else:
+            reasons.append(f"✗ Trend not aligned: {', '.join(trend['missing'])}")
+            ready = False
 
         # 4. M1 cross-then-touch (same as PAIN SELL)
-        if not self.m1_state.is_sell_signal(symbol):
-            reasons.append("M1: No cross-then-touch SELL signal")
-            return {'ready': False, 'reasons': reasons}
+        if self.m1_state.is_sell_signal(symbol):
+            reasons.append("✓ M1 cross-then-touch SELL signal")
+        else:
+            reasons.append("✗ M1: No cross-then-touch SELL signal")
+            ready = False
 
-        reasons.append("✓ M1 cross-then-touch SELL signal")
-
-        # All conditions met!
-        ready = True
         return {'ready': ready, 'reasons': reasons}
 
     def get_bot_summary(self, symbol: str) -> str:

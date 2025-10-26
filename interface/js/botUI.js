@@ -82,8 +82,10 @@ function updateBotStatus(data) {
             const formattedReasons = result.reasons.map(reason => {
                 if (reason.includes('✓')) {
                     return `<span class="check">${reason}</span>`;
-                } else {
+                } else if (reason.includes('✗')) {
                     return `<span class="cross">${reason}</span>`;
+                } else {
+                    return `<span>${reason}</span>`;
                 }
             }).join('<br>');
 
