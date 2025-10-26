@@ -27,8 +27,10 @@ function updateBotStatus(data) {
     document.getElementById('botTrend').textContent = botData.trend_summary || '--';
     document.getElementById('botM1State').textContent = botData.m1_state || '--';
 
-    // Update each bot
+    // Determine symbol type from received bot_results
     const botResults = botData.bot_results || {};
+    const isPainSymbol = botResults.hasOwnProperty('pain_buy') || botResults.hasOwnProperty('pain_sell');
+    const isGainSymbol = botResults.hasOwnProperty('gain_buy') || botResults.hasOwnProperty('gain_sell');
 
     // Bot type mapping
     const botMap = {
@@ -53,6 +55,23 @@ function updateBotStatus(data) {
             reasonsId: 'gainSellReasons'
         }
     };
+
+    // Hide/show bot cards based on symbol type
+    // PAIN bots for PainX symbols, GAIN bots for GainX symbols
+    for (const [botName, config] of Object.entries(botMap)) {
+        const card = document.getElementById(config.cardId);
+        if (!card) continue;
+
+        const isPainBot = botName.startsWith('pain_');
+        const isGainBot = botName.startsWith('gain_');
+
+        // Show only relevant bots based on what backend sent
+        if ((isPainBot && isPainSymbol) || (isGainBot && isGainSymbol)) {
+            card.style.display = 'block';
+        } else {
+            card.style.display = 'none';
+        }
+    }
 
     // Update each bot status
     for (const [botName, result] of Object.entries(botResults)) {

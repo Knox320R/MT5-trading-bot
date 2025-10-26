@@ -170,30 +170,32 @@ class BotEngine:
         m1_snake = tf_indicators.get('M1', {}).get('snake', [])
         self.m1_state.update(symbol, m1_bars_data, m1_purple, m1_snake)
 
-        # Check each bot
+        # Check bots based on symbol type
         results = {}
 
-        # PAIN BUY
-        results[BotType.PAIN_BUY] = self._check_pain_buy(
-            symbol, bias, trend_buy, m30_bars, m30_snake, tf_indicators
-        )
+        # Determine symbol type
+        is_pain = config.is_pain_symbol(symbol)
+        is_gain = config.is_gain_symbol(symbol)
 
-        # PAIN SELL
-        results[BotType.PAIN_SELL] = self._check_pain_sell(
-            symbol, bias, trend_sell, m30_bars, m30_snake, tf_indicators
-        )
+        # PAIN bots only for PainX symbols
+        if is_pain:
+            results[BotType.PAIN_BUY] = self._check_pain_buy(
+                symbol, bias, trend_buy, m30_bars, m30_snake, tf_indicators
+            )
+            results[BotType.PAIN_SELL] = self._check_pain_sell(
+                symbol, bias, trend_sell, m30_bars, m30_snake, tf_indicators
+            )
 
-        # GAIN BUY
-        m15_bars = tf_data.get('M15', [])
-        h4_bars = tf_data.get('H4', [])
-        results[BotType.GAIN_BUY] = self._check_gain_buy(
-            symbol, bias, trend_buy, m15_bars, h4_bars, tf_indicators
-        )
-
-        # GAIN SELL
-        results[BotType.GAIN_SELL] = self._check_gain_sell(
-            symbol, bias, trend_sell, m15_bars, h4_bars, tf_indicators
-        )
+        # GAIN bots only for GainX symbols
+        if is_gain:
+            m15_bars = tf_data.get('M15', [])
+            h4_bars = tf_data.get('H4', [])
+            results[BotType.GAIN_BUY] = self._check_gain_buy(
+                symbol, bias, trend_buy, m15_bars, h4_bars, tf_indicators
+            )
+            results[BotType.GAIN_SELL] = self._check_gain_sell(
+                symbol, bias, trend_sell, m15_bars, h4_bars, tf_indicators
+            )
 
         return {
             'symbol': symbol,

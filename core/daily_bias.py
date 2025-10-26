@@ -61,19 +61,19 @@ class DailyBiasService:
 
         # Determine bias based on which wick is longer
         # Use epsilon for tie-breaking
-        # CORRECTED LOGIC:
-        # - Long LOWER wick = Price rejected downward = BUY bias (buyers pushed back up)
-        # - Long UPPER wick = Price rejected upward = SELL bias (sellers pushed back down)
+        # CORRECT LOGIC:
+        # - Long LOWER wick = Price went down and was rejected UP = SELL bias (bearish reversal from bottom)
+        # - Long UPPER wick = Price went up and was rejected DOWN = BUY bias (bullish reversal from top)
         if lower_wick > upper_wick * (1 + self.epsilon):
-            # BUY day - lower wick shows rejection of lower prices
-            bias = 'BUY'
-            level50 = None  # BUY days don't use wick stop
-        elif upper_wick > lower_wick * (1 + self.epsilon):
-            # SELL day - upper wick shows rejection of higher prices
+            # SELL day - lower wick shows price tried to go down but was pushed back
             bias = 'SELL'
             # Compute 50% wick stop level (50% down from body low)
             base_low = min(o, c)
             level50 = base_low - 0.5 * lower_wick
+        elif upper_wick > lower_wick * (1 + self.epsilon):
+            # BUY day - upper wick shows price tried to go up but was pushed back
+            bias = 'BUY'
+            level50 = None  # BUY days don't use wick stop
         else:
             # Too close - neutral
             bias = 'NEUTRAL'

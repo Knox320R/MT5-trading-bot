@@ -136,6 +136,14 @@ class Config:
         """Get GainX symbols"""
         return self.get('symbols', 'gain', default=[])
 
+    def is_pain_symbol(self, symbol: str) -> bool:
+        """Check if symbol is a PAIN symbol"""
+        return symbol in self.get_pain_symbols()
+
+    def is_gain_symbol(self, symbol: str) -> bool:
+        """Check if symbol is a GAIN symbol"""
+        return symbol in self.get_gain_symbols()
+
     def get_default_symbol(self) -> str:
         """Get default trading symbol"""
         return self.get('trading', 'default_symbol', default='PainX 400')
