@@ -42,13 +42,20 @@ function executeTrade(action) {
 }
 
 function setupTradingButtons() {
-    document.getElementById('buyBtn').addEventListener('click', () => {
-        executeTrade('buy');
-    });
+    const buyBtn = document.getElementById('buyBtn');
+    const sellBtn = document.getElementById('sellBtn');
 
-    document.getElementById('sellBtn').addEventListener('click', () => {
-        executeTrade('sell');
-    });
+    if (buyBtn) {
+        buyBtn.addEventListener('click', () => {
+            executeTrade('buy');
+        });
+    }
+
+    if (sellBtn) {
+        sellBtn.addEventListener('click', () => {
+            executeTrade('sell');
+        });
+    }
 }
 
 // ========================================
