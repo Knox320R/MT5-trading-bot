@@ -85,7 +85,7 @@ function updateBotStatus(data) {
                     const text = reason.text;
                     const detail = reason.detail || '';
                     const cssClass = text.includes('✓') ? 'check' : (text.includes('✗') ? 'cross' : '');
-                    return `<span class="${cssClass}" title="${detail}">${text}</span>`;
+                    return `<span class="${cssClass}" data-tooltip="${detail}">${text}</span>`;
                 }
                 // Handle string format (backward compatibility)
                 else if (typeof reason === 'string') {
