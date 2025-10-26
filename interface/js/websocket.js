@@ -108,19 +108,15 @@ class WebSocketManager {
                         AppState.snakePeriod = data.data.indicators.snake_period || 100;
                         AppState.purplePeriod = data.data.indicators.purple_line_period || 10;
 
-                        // Update UI sliders to match config
+                        // Update UI inputs to match config
                         const snakePeriodInput = document.getElementById('snakePeriod');
                         const purplePeriodInput = document.getElementById('purplePeriod');
-                        const snakePeriodValue = document.getElementById('snakePeriodValue');
-                        const purplePeriodValue = document.getElementById('purplePeriodValue');
 
                         if (snakePeriodInput) {
                             snakePeriodInput.value = AppState.snakePeriod;
-                            if (snakePeriodValue) snakePeriodValue.textContent = AppState.snakePeriod;
                         }
                         if (purplePeriodInput) {
                             purplePeriodInput.value = AppState.purplePeriod;
-                            if (purplePeriodValue) purplePeriodValue.textContent = AppState.purplePeriod;
                         }
 
                     }

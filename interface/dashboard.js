@@ -104,15 +104,12 @@ function setupHistoricalDataControls() {
 function setupPeriodControls() {
     const snakePeriodInput = document.getElementById('snakePeriod');
     const purplePeriodInput = document.getElementById('purplePeriod');
-    const snakePeriodValue = document.getElementById('snakePeriodValue');
-    const purplePeriodValue = document.getElementById('purplePeriodValue');
 
     if (!snakePeriodInput || !purplePeriodInput) return;
 
     // Update Snake period
-    snakePeriodInput.addEventListener('input', (e) => {
+    snakePeriodInput.addEventListener('change', (e) => {
         const newPeriod = parseInt(e.target.value);
-        snakePeriodValue.textContent = newPeriod;
         AppState.snakePeriod = newPeriod;
 
         // Send to server for bot strategy
@@ -141,9 +138,8 @@ function setupPeriodControls() {
     });
 
     // Update Purple period
-    purplePeriodInput.addEventListener('input', (e) => {
+    purplePeriodInput.addEventListener('change', (e) => {
         const newPeriod = parseInt(e.target.value);
-        purplePeriodValue.textContent = newPeriod;
         AppState.purplePeriod = newPeriod;
 
         // Send to server for bot strategy
