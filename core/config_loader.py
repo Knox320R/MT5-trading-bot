@@ -230,14 +230,38 @@ class Config:
         return self.get('logging', 'log_directory', default='logs')
 
     # Indicator settings (User-configurable)
+    def get_ema_smoothing(self) -> float:
+        """
+        Get EMA smoothing factor from config.json.
+
+        Default: 2.0 (standard smoothing factor per EMA.txt)
+
+        This value is used in the EMA formula:
+        EMA_today = (Value_today * (Smoothing / (1 + Days))) + EMA_yesterday * (1 - (Smoothing / (1 + Days)))
+        where k = Smoothing / (1 + Days)
+
+        Higher smoothing values give MORE weight to recent data:
+        - Smoothing = 2: Standard (recommended per EMA.txt)
+        - Smoothing = 3: More responsive to price changes
+        - Smoothing = 1: Less responsive to price changes
+
+        Config location: indicators.ema_formula.smoothing
+
+        Returns:
+            EMA smoothing factor (typically 1.0 to 3.0)
+        """
+        return float(self.get('indicators', 'ema_formula', 'smoothing', default=2.0))
+
     def get_snake_period(self) -> int:
         """
         Get Snake (EMA) period from config.json.
 
         Default: 100 (commonly used for long-term trend identification)
 
-        This value is user-configurable in config.json under:
-        indicators.snake.period
+        This is the "Days" parameter in the EMA formula:
+        EMA_today = (Value_today * (Smoothing / (1 + Days))) + EMA_yesterday * (1 - (Smoothing / (1 + Days)))
+
+        Config location: indicators.snake.period
 
         Returns:
             Snake EMA period (recommended: 50, 100, or 200)
@@ -254,8 +278,10 @@ class Config:
 
         Default: 10 (commonly used for short-term entry signals)
 
-        This value is user-configurable in config.json under:
-        indicators.purple_line.period
+        This is the "Days" parameter in the EMA formula:
+        EMA_today = (Value_today * (Smoothing / (1 + Days))) + EMA_yesterday * (1 - (Smoothing / (1 + Days)))
+
+        Config location: indicators.purple_line.period
 
         Returns:
             Purple Line EMA period (recommended: 8, 10, 12, or 20)

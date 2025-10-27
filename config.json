@@ -130,15 +130,19 @@
     "comment": "PAIN SELL only: if today_low <= (base_low - 0.5 * lower_wick), halt new trades until next 16:00"
   },
   "indicators": {
+    "ema_formula": {
+      "smoothing": 2,
+      "description": "EMA smoothing factor. Standard value is 2. Formula: k = Smoothing / (1 + Days). Higher values give more weight to recent data."
+    },
     "snake": {
       "period": 25,
       "type": "EMA",
-      "description": "Primary trend indicator - EMA 100. User-configurable. Recommended: 50, 100, or 200"
+      "description": "Primary trend indicator - EMA 100. Days parameter in formula. Recommended: 50, 100, or 200"
     },
     "purple_line": {
       "period": 10,
       "type": "EMA",
-      "description": "Entry signal indicator - EMA 10. User-configurable. Recommended: 8, 10, 12, or 20"
+      "description": "Entry signal indicator - EMA 10. Days parameter in formula. Recommended: 8, 10, 12, or 20"
     },
     "rsi": {
       "period": 14,

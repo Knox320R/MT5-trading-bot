@@ -65,6 +65,7 @@ class RealtimeDataServer:
                     'dashboard_title': config.get_dashboard_title(),
                     'environment': config.get_environment_mode(),
                     'indicators': {
+                        'ema_smoothing': config.get_ema_smoothing(),
                         'snake_period': config.get_snake_period(),
                         'snake_type': config.get_snake_type(),
                         'purple_line_period': config.get_purple_line_period(),

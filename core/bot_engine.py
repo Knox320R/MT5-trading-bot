@@ -64,11 +64,12 @@ class BotEngine:
             epsilon=config.get_daily_bias_epsilon()
         )
 
-        # Get indicator periods (user-adjustable)
-        snake_period = config.get_snake_period()
-        purple_period = config.get_purple_line_period()
+        # Get indicator parameters from config (user-adjustable)
+        snake_period = config.get_snake_period()  # Days parameter
+        purple_period = config.get_purple_line_period()  # Days parameter
+        smoothing = config.get_ema_smoothing()  # Smoothing factor
 
-        self.indicator_calc = IndicatorCalculator(snake_period, purple_period)
+        self.indicator_calc = IndicatorCalculator(snake_period, purple_period, smoothing)
 
         equality_is_not_trend = config.get_equality_is_not_trend()
         self.trend_filter = TrendFilterService(self.indicator_calc, equality_is_not_trend)

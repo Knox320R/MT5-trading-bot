@@ -14,16 +14,18 @@ class IndicatorCalculator:
     All calculations use close prices from closed candles only.
     """
 
-    def __init__(self, snake_period: int = 100, purple_period: int = 10):
+    def __init__(self, snake_period: int = 100, purple_period: int = 10, smoothing: float = 2.0):
         """
         Initialize indicator calculator.
 
         Args:
-            snake_period: EMA period for Snake indicator
-            purple_period: EMA period for Purple Line indicator
+            snake_period: EMA period for Snake indicator (Days parameter)
+            purple_period: EMA period for Purple Line indicator (Days parameter)
+            smoothing: EMA smoothing factor (default: 2.0 per EMA.txt)
         """
         self.snake_period = snake_period
         self.purple_period = purple_period
+        self.smoothing = smoothing
         self.ema_cache = {}  # (symbol, timeframe, period) -> EMA array
 
     def set_periods(self, snake_period: int, purple_period: int):
@@ -40,16 +42,30 @@ class IndicatorCalculator:
             # Clear cache since periods changed
             self.ema_cache.clear()
 
-    def calculate_ema(self, prices: List[float], period: int) -> List[float]:
+    def calculate_ema(self, prices: List[float], period: int, smoothing: float = None) -> List[float]:
         """
-        Calculate Exponential Moving Average.
+        Calculate Exponential Moving Average using the configurable formula from EMA.txt.
+
+        Formula (from EMA.txt):
+        EMA_today = (Value_today * (Smoothing / (1 + Days))) + EMA_yesterday * (1 - (Smoothing / (1 + Days)))
+
+        where:
+        - Smoothing = configurable smoothing factor (default: from config, standard = 2)
+        - Days = period (number of observations)
+        - Multiplier k = Smoothing / (1 + Days)
+
+        Higher smoothing values give MORE weight to recent data:
+        - Smoothing = 2: Standard (9.52% weight for 20-period)
+        - Smoothing = 3: More responsive (14.29% weight for 20-period)
+        - Smoothing = 1: Less responsive (4.76% weight for 20-period)
 
         Args:
             prices: List of close prices
-            period: EMA period
+            period: EMA period (Days parameter, e.g., 10, 20, 50, 100, 200)
+            smoothing: Optional smoothing factor override (uses self.smoothing if None)
 
         Returns:
-            List of EMA values (same length as prices)
+            List of EMA values (same length as prices, initial values are NaN)
         """
         if not prices or len(prices) < period:
             return []
@@ -57,17 +73,22 @@ class IndicatorCalculator:
         prices_array = np.array(prices, dtype=float)
         ema = np.zeros(len(prices))
 
-        # Multiplier
-        k = 2.0 / (period + 1)
+        # Use provided smoothing or instance default from config
+        smooth = smoothing if smoothing is not None else self.smoothing
 
-        # Initialize with SMA
-        ema[period - 1] = np.mean(prices_array[:period])
+        # Multiplier: k = Smoothing / (1 + Days)
+        # This implements the exact formula from EMA.txt
+        k = smooth / (period + 1)
 
-        # Calculate EMA
+        # Initialize with SMA of first 'period' prices
+        sma = np.mean(prices_array[:period])
+        ema[period - 1] = sma
+
+        # Calculate EMA using formula: EMA_today = Value_today * k + EMA_yesterday * (1 - k)
         for i in range(period, len(prices)):
             ema[i] = prices_array[i] * k + ema[i - 1] * (1 - k)
 
-        # Fill initial values with None/NaN
+        # Fill initial values with NaN
         ema[:period - 1] = np.nan
 
         return ema.tolist()
