@@ -131,7 +131,7 @@
   },
   "indicators": {
     "snake": {
-      "period": 100,
+      "period": 25,
       "type": "EMA",
       "locked": true,
       "description": "Primary trend indicator - EMA 100 (TEMPLATE-LOCKED, DO NOT MODIFY)"
