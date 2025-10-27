@@ -220,7 +220,6 @@ class WebSocketManager {
         const trades = data.trades;
 
         if (!trades || trades.length === 0) {
-            console.log('No trade history for this period');
             return;
         }
 
@@ -229,24 +228,19 @@ class WebSocketManager {
     }
 
     addTradeMarkersToChart(trades) {
-        console.log('[DEBUG] addTradeMarkersToChart called with trades:', trades);
 
         if (!AppState.historicalChart) {
-            console.log('[DEBUG] No historical chart found');
             return;
         }
 
-        console.log('[DEBUG] Historical chart exists');
 
         // Create arrays for BUY and SELL markers
         const buyMarkers = [];
         const sellMarkers = [];
         const chartLabels = AppState.historicalChart.data.labels;
 
-        console.log('[DEBUG] Chart labels:', chartLabels);
 
         for (const trade of trades) {
-            console.log('[DEBUG] Processing trade:', trade);
 
             if (trade.action === 'ENTRY' && trade.entry_time) {
                 const isBuy = trade.bot_type.includes('buy');
@@ -257,7 +251,6 @@ class WebSocketManager {
                 const entryTime = entryDateTime[1].split('.')[0];
                 const formattedTime = `${entryDate} ${entryTime}`;
 
-                console.log(`[DEBUG] Trade ${isBuy ? 'BUY' : 'SELL'} at ${formattedTime}, price: ${trade.entry_price}`);
 
                 // Find nearest bar index in chart labels
                 let matchIndex = -1;
@@ -274,7 +267,6 @@ class WebSocketManager {
                     }
                 }
 
-                console.log(`[DEBUG] Match index: ${matchIndex}, time diff: ${(minDiff / 60000).toFixed(1)} minutes`);
 
                 if (matchIndex >= 0) {
                     // Ensure price is a number
@@ -286,7 +278,6 @@ class WebSocketManager {
                         isBuy: isBuy
                     };
 
-                    console.log(`[DEBUG] Adding marker at index ${matchIndex}, price ${price}, isBuy: ${isBuy}`);
 
                     if (isBuy) {
                         buyMarkers.push(markerData);
@@ -294,12 +285,10 @@ class WebSocketManager {
                         sellMarkers.push(markerData);
                     }
                 } else {
-                    console.log('[DEBUG] Skipped - no match index');
                 }
             }
         }
 
-        console.log(`[DEBUG] Buy markers: ${buyMarkers.length}, Sell markers: ${sellMarkers.length}`);
 
         // Add or update marker datasets
         if (buyMarkers.length > 0 || sellMarkers.length > 0) {
@@ -316,13 +305,17 @@ class WebSocketManager {
                     data: buyMarkers,
                     backgroundColor: '#00ff00',
                     borderColor: '#00ff00',
+                    borderWidth: 2,
                     pointStyle: 'triangle',
                     rotation: 180,  // Point down
-                    pointRadius: 8,
-                    pointHoverRadius: 10,
-                    order: 0
+                    pointRadius: 12,
+                    pointHoverRadius: 15,
+                    showLine: false,
+                    order: -1,  // Render on top
+                    yAxisID: 'y',
+                    parsing: false,
+                    hidden: false
                 });
-                console.log('[DEBUG] Added BUY markers dataset');
             }
 
             // Add SELL markers dataset (red upward triangle)
@@ -333,18 +326,21 @@ class WebSocketManager {
                     data: sellMarkers,
                     backgroundColor: '#ff0000',
                     borderColor: '#ff0000',
+                    borderWidth: 2,
                     pointStyle: 'triangle',
                     rotation: 0,  // Point up
-                    pointRadius: 8,
-                    pointHoverRadius: 10,
-                    order: 0
+                    pointRadius: 12,
+                    pointHoverRadius: 15,
+                    showLine: false,
+                    order: -1,  // Render on top
+                    yAxisID: 'y',
+                    parsing: false,
+                    hidden: false
                 });
-                console.log('[DEBUG] Added SELL markers dataset');
             }
 
-            // Update chart
-            AppState.historicalChart.update('none');
-            console.log(`[DEBUG] Chart updated with ${buyMarkers.length + sellMarkers.length} total markers`);
+            // Update chart with animation to make markers visible
+            AppState.historicalChart.update();
         }
     }
 

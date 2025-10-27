@@ -183,6 +183,6 @@ function initializeChart(canvasId) {
             datasets: createDatasetConfig()
         },
         options: createChartOptions(),
-        plugins: [candlestickWickPlugin]
+        plugins: [candlestickWickPlugin, tradeMarkerPlugin]
     });
 }
