@@ -474,8 +474,11 @@ class RealtimeDataServer:
                     # Check for ready signals and execute if risk gates pass
                     for bot_type, result in bot_results['bot_results'].items():
                         if result['ready']:
+                            print(f"[BOT_ENGINE] {symbol} - {bot_type.value} is READY to trade!")
+
                             # Check if already in position
                             if self.order_manager.has_open_position(symbol, bot_type.value):
+                                print(f"[BOT_ENGINE] {symbol} - {bot_type.value} already has open position, skipping")
                                 continue
 
                             # Check global risk gates
@@ -484,8 +487,10 @@ class RealtimeDataServer:
 
                             risk_check = self.risk_manager.check_all_gates(symbol, order_type, bot_type_str)
                             if not risk_check['allowed']:
-                                print(f"[BLOCKED] {bot_type_str} - Risk gates: {', '.join(risk_check['reasons'])}")
+                                print(f"[BLOCKED] {symbol} - {bot_type_str} - Risk gates: {', '.join(risk_check['reasons'])}")
                                 continue
+
+                            print(f"[BOT_ENGINE] {symbol} - {bot_type_str} passed all risk gates, executing trade...")
 
                             # Execute order
                             # Extract text from reasons (handle both dict and string formats)
@@ -509,16 +514,21 @@ class RealtimeDataServer:
                                 )
 
                             if entry_result['success']:
-                                print(f"[EXECUTED] {bot_type_str}: {symbol} @ {entry_result['price']:.5f}")
+                                print(f"[EXECUTED] {bot_type_str}: {symbol} @ {entry_result['price']:.5f}, ticket: {entry_result['ticket']}")
 
                                 # Increment consecutive orders counter
                                 self.risk_manager.increment_consecutive_orders(symbol, bot_type_str)
 
                                 # Log trade entry
-                                self.trade_logger.log_trade_entry(
+                                print(f"[BOT_ENGINE] Calling trade_logger.log_trade_entry()...")
+                                log_success = self.trade_logger.log_trade_entry(
                                     symbol, bot_type_str, entry_result,
                                     bot_results['bias'], bot_results['trend_summary']
                                 )
+                                if log_success:
+                                    print(f"[BOT_ENGINE] ✓ Trade entry logged to CSV")
+                                else:
+                                    print(f"[BOT_ENGINE] ✗ Failed to log trade entry to CSV")
 
                                 # Broadcast to clients
                                 await self.send_data_to_clients({
@@ -544,10 +554,15 @@ class RealtimeDataServer:
                             self.risk_manager.record_trade_result(symbol, exit_info['profit'], exit_info['bot_type'])
 
                             # Log trade exit
-                            self.trade_logger.log_trade_exit(
+                            print(f"[BOT_ENGINE] Calling trade_logger.log_trade_exit()...")
+                            log_success = self.trade_logger.log_trade_exit(
                                 symbol, exit_info['bot_type'], exit_info,
                                 bot_results['bias'], bot_results['trend_summary']
                             )
+                            if log_success:
+                                print(f"[BOT_ENGINE] ✓ Trade exit logged to CSV")
+                            else:
+                                print(f"[BOT_ENGINE] ✗ Failed to log trade exit to CSV")
 
                             # Broadcast to clients
                             await self.send_data_to_clients({

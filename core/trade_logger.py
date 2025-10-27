@@ -69,6 +69,9 @@ class TradeLogger:
             # Create daily CSV file
             filename = os.path.join(self.report_dir, f"trades_{date_str}.csv")
 
+            print(f"[TRADE_LOGGER] Logging ENTRY: {bot_type} {symbol} @ {entry_info.get('price', 0):.5f}")
+            print(f"[TRADE_LOGGER] File: {filename}")
+
             # Check if file exists
             file_exists = os.path.exists(filename)
 
@@ -77,6 +80,7 @@ class TradeLogger:
 
                 if not file_exists:
                     writer.writeheader()
+                    print(f"[TRADE_LOGGER] Created new CSV file with header")
 
                 writer.writerow({
                     'timestamp': timestamp.isoformat(),
@@ -97,10 +101,13 @@ class TradeLogger:
                     'trend_status': trend_status
                 })
 
+            print(f"[TRADE_LOGGER] ✓ Entry logged successfully to {filename}")
             return True
 
         except Exception as e:
-            print(f"Error logging trade entry: {e}")
+            print(f"[TRADE_LOGGER] ✗ Error logging trade entry: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def log_trade_exit(self, symbol: str, bot_type: str, exit_info: Dict,
@@ -124,6 +131,9 @@ class TradeLogger:
 
             filename = os.path.join(self.report_dir, f"trades_{date_str}.csv")
 
+            print(f"[TRADE_LOGGER] Logging EXIT: {bot_type} {symbol}, profit: ${exit_info.get('profit', 0):.2f}")
+            print(f"[TRADE_LOGGER] File: {filename}")
+
             # Calculate duration
             entry_time = exit_info.get('entry_time')
             exit_time = exit_info.get('close_time')
@@ -140,6 +150,7 @@ class TradeLogger:
 
                 if not file_exists:
                     writer.writeheader()
+                    print(f"[TRADE_LOGGER] Created new CSV file with header")
 
                 writer.writerow({
                     'timestamp': timestamp.isoformat(),
@@ -160,10 +171,13 @@ class TradeLogger:
                     'trend_status': trend_status
                 })
 
+            print(f"[TRADE_LOGGER] ✓ Exit logged successfully to {filename}")
             return True
 
         except Exception as e:
-            print(f"Error logging trade exit: {e}")
+            print(f"[TRADE_LOGGER] ✗ Error logging trade exit: {e}")
+            import traceback
+            traceback.print_exc()
             return False
 
     def log_signal(self, symbol: str, bot_type: str, signal_info: Dict) -> bool:
