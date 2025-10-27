@@ -249,24 +249,12 @@ class RealtimeDataServer:
                     print(f"  [ERROR] Error: {e}")
 
             elif command == 'set_indicator_period':
-                # Update indicator periods (from UI range inputs)
-                indicator = data.get('indicator')  # 'snake' or 'purple'
-                period = data.get('period')
-
-                print(f"Indicator period update: {indicator} = {period}")
-
-                # Update in bot engine
-                if indicator == 'snake':
-                    current_purple = self.bot_engine.indicator_calc.purple_period
-                    self.bot_engine.update_indicator_periods(period, current_purple)
-                elif indicator == 'purple':
-                    current_snake = self.bot_engine.indicator_calc.snake_period
-                    self.bot_engine.update_indicator_periods(current_snake, period)
-
+                # DEPRECATED: Indicator periods are now set in config.json only
+                # This command is kept for backward compatibility but does nothing
+                print(f"[WARNING] set_indicator_period command is deprecated. EMA periods are now controlled via config.json")
                 await websocket.send(json.dumps({
-                    'type': 'indicator_period_updated',
-                    'indicator': indicator,
-                    'period': period
+                    'type': 'error',
+                    'message': 'Indicator periods must be set in config.json and require server restart'
                 }))
 
             elif command == 'get_config':

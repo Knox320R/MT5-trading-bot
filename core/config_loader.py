@@ -229,19 +229,20 @@ class Config:
         """Get log directory path"""
         return self.get('logging', 'log_directory', default='logs')
 
-    # Indicator settings (TEMPLATE-LOCKED)
+    # Indicator settings (User-configurable)
     def get_snake_period(self) -> int:
         """
-        Get Snake (EMA) period.
+        Get Snake (EMA) period from config.json.
 
-        TEMPLATE-LOCKED: Always returns 100.
-        This value cannot be modified - it is part of the strategy template.
+        Default: 100 (commonly used for long-term trend identification)
+
+        This value is user-configurable in config.json under:
+        indicators.snake.period
+
+        Returns:
+            Snake EMA period (recommended: 50, 100, or 200)
         """
-        # Enforce template value regardless of config
-        config_value = self.get('indicators', 'snake', 'period', default=100)
-        if config_value != 100:
-            print(f"WARNING: Snake period in config ({config_value}) does not match template (100). Using template value 100.")
-        return 100  # TEMPLATE-LOCKED
+        return self.get('indicators', 'snake', 'period', default=100)
 
     def get_snake_type(self) -> str:
         """Get Snake indicator type"""
@@ -249,16 +250,17 @@ class Config:
 
     def get_purple_line_period(self) -> int:
         """
-        Get Purple Line (EMA) period.
+        Get Purple Line (EMA) period from config.json.
 
-        TEMPLATE-LOCKED: Always returns 10.
-        This value cannot be modified - it is part of the strategy template.
+        Default: 10 (commonly used for short-term entry signals)
+
+        This value is user-configurable in config.json under:
+        indicators.purple_line.period
+
+        Returns:
+            Purple Line EMA period (recommended: 8, 10, 12, or 20)
         """
-        # Enforce template value regardless of config
-        config_value = self.get('indicators', 'purple_line', 'period', default=10)
-        if config_value != 10:
-            print(f"WARNING: Purple Line period in config ({config_value}) does not match template (10). Using template value 10.")
-        return 10  # TEMPLATE-LOCKED
+        return self.get('indicators', 'purple_line', 'period', default=10)
 
     def get_purple_line_type(self) -> str:
         """Get Purple Line indicator type"""
