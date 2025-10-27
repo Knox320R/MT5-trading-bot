@@ -131,6 +131,10 @@ class WebSocketManager {
                     this.handleHistoricalData(data);
                     break;
 
+                case 'trade_history':
+                    this.handleTradeHistory(data);
+                    break;
+
                 case 'trade_result':
                     this.handleTradeResult(data);
                     break;
@@ -189,6 +193,159 @@ class WebSocketManager {
             document.getElementById('historicalChartInfo').textContent =
                 `Historical Data: ${date} - ${timeframe}`;
         });
+
+        // After loading historical data, fetch trade history for the same period
+        this.loadTradeHistoryForChart(data);
+    }
+
+    loadTradeHistoryForChart(historicalData) {
+        if (!historicalData.bars || historicalData.bars.length === 0) return;
+
+        const firstBar = historicalData.bars[0];
+        const lastBar = historicalData.bars[historicalData.bars.length - 1];
+
+        // Extract dates from timestamps
+        const dateFrom = firstBar.time.split(' ')[0];  // YYYY-MM-DD
+        const dateTo = lastBar.time.split(' ')[0];      // YYYY-MM-DD
+
+        this.send({
+            command: 'get_trade_history',
+            symbol: historicalData.symbol || AppState.currentSymbol,
+            date_from: dateFrom,
+            date_to: dateTo
+        });
+    }
+
+    handleTradeHistory(data) {
+        const trades = data.trades;
+
+        if (!trades || trades.length === 0) {
+            console.log('No trade history for this period');
+            return;
+        }
+
+        // Add trade markers to historical chart
+        this.addTradeMarkersToChart(trades);
+    }
+
+    addTradeMarkersToChart(trades) {
+        console.log('[DEBUG] addTradeMarkersToChart called with trades:', trades);
+
+        if (!AppState.historicalChart) {
+            console.log('[DEBUG] No historical chart found');
+            return;
+        }
+
+        console.log('[DEBUG] Historical chart exists');
+
+        // Create arrays for BUY and SELL markers
+        const buyMarkers = [];
+        const sellMarkers = [];
+        const chartLabels = AppState.historicalChart.data.labels;
+
+        console.log('[DEBUG] Chart labels:', chartLabels);
+
+        for (const trade of trades) {
+            console.log('[DEBUG] Processing trade:', trade);
+
+            if (trade.action === 'ENTRY' && trade.entry_time) {
+                const isBuy = trade.bot_type.includes('buy');
+
+                // Parse entry time to match chart label format
+                const entryDateTime = trade.entry_time.split('T');
+                const entryDate = entryDateTime[0];
+                const entryTime = entryDateTime[1].split('.')[0];
+                const formattedTime = `${entryDate} ${entryTime}`;
+
+                console.log(`[DEBUG] Trade ${isBuy ? 'BUY' : 'SELL'} at ${formattedTime}, price: ${trade.entry_price}`);
+
+                // Find nearest bar index in chart labels
+                let matchIndex = -1;
+                const tradeTime = new Date(trade.entry_time).getTime();
+                let minDiff = Infinity;
+
+                for (let i = 0; i < chartLabels.length; i++) {
+                    const barTime = new Date(chartLabels[i]).getTime();
+                    const diff = Math.abs(barTime - tradeTime);
+
+                    if (diff < minDiff) {
+                        minDiff = diff;
+                        matchIndex = i;
+                    }
+                }
+
+                console.log(`[DEBUG] Match index: ${matchIndex}, time diff: ${(minDiff / 60000).toFixed(1)} minutes`);
+
+                if (matchIndex >= 0) {
+                    // Ensure price is a number
+                    const price = parseFloat(trade.entry_price);
+
+                    const markerData = {
+                        x: matchIndex,
+                        y: price,
+                        isBuy: isBuy
+                    };
+
+                    console.log(`[DEBUG] Adding marker at index ${matchIndex}, price ${price}, isBuy: ${isBuy}`);
+
+                    if (isBuy) {
+                        buyMarkers.push(markerData);
+                    } else {
+                        sellMarkers.push(markerData);
+                    }
+                } else {
+                    console.log('[DEBUG] Skipped - no match index');
+                }
+            }
+        }
+
+        console.log(`[DEBUG] Buy markers: ${buyMarkers.length}, Sell markers: ${sellMarkers.length}`);
+
+        // Add or update marker datasets
+        if (buyMarkers.length > 0 || sellMarkers.length > 0) {
+            // Remove existing marker datasets if any
+            AppState.historicalChart.data.datasets = AppState.historicalChart.data.datasets.filter(
+                ds => ds.label !== 'BUY Trades' && ds.label !== 'SELL Trades'
+            );
+
+            // Add BUY markers dataset (green downward triangle)
+            if (buyMarkers.length > 0) {
+                AppState.historicalChart.data.datasets.push({
+                    label: 'BUY Trades',
+                    type: 'scatter',
+                    data: buyMarkers,
+                    backgroundColor: '#00ff00',
+                    borderColor: '#00ff00',
+                    pointStyle: 'triangle',
+                    rotation: 180,  // Point down
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    order: 0
+                });
+                console.log('[DEBUG] Added BUY markers dataset');
+            }
+
+            // Add SELL markers dataset (red upward triangle)
+            if (sellMarkers.length > 0) {
+                AppState.historicalChart.data.datasets.push({
+                    label: 'SELL Trades',
+                    type: 'scatter',
+                    data: sellMarkers,
+                    backgroundColor: '#ff0000',
+                    borderColor: '#ff0000',
+                    pointStyle: 'triangle',
+                    rotation: 0,  // Point up
+                    pointRadius: 8,
+                    pointHoverRadius: 10,
+                    order: 0
+                });
+                console.log('[DEBUG] Added SELL markers dataset');
+            }
+
+            // Update chart
+            AppState.historicalChart.update('none');
+            console.log(`[DEBUG] Chart updated with ${buyMarkers.length + sellMarkers.length} total markers`);
+        }
     }
 
     handleTradeResult(data) {

@@ -65,10 +65,9 @@ class TradeLogger:
         try:
             timestamp = self.tz_handler.now()
             date_str = timestamp.strftime('%Y-%m-%d')
-            hour_str = timestamp.strftime('%H')
 
-            # Create hourly CSV file
-            filename = os.path.join(self.report_dir, f"trades_{date_str}_{hour_str}.csv")
+            # Create daily CSV file
+            filename = os.path.join(self.report_dir, f"trades_{date_str}.csv")
 
             # Check if file exists
             file_exists = os.path.exists(filename)
@@ -122,9 +121,8 @@ class TradeLogger:
         try:
             timestamp = self.tz_handler.now()
             date_str = timestamp.strftime('%Y-%m-%d')
-            hour_str = timestamp.strftime('%H')
 
-            filename = os.path.join(self.report_dir, f"trades_{date_str}_{hour_str}.csv")
+            filename = os.path.join(self.report_dir, f"trades_{date_str}.csv")
 
             # Calculate duration
             entry_time = exit_info.get('entry_time')
@@ -183,9 +181,8 @@ class TradeLogger:
         try:
             timestamp = self.tz_handler.now()
             date_str = timestamp.strftime('%Y-%m-%d')
-            hour_str = timestamp.strftime('%H')
 
-            filename = os.path.join(self.report_dir, f"signals_{date_str}_{hour_str}.csv")
+            filename = os.path.join(self.report_dir, f"signals_{date_str}.csv")
 
             file_exists = os.path.exists(filename)
 
@@ -271,13 +268,10 @@ class TradeLogger:
             'by_bot': {}
         }
 
-        # Read all hourly files for the day
-        for hour in range(24):
-            hour_str = f"{hour:02d}"
-            filename = os.path.join(self.report_dir, f"trades_{date}_{hour_str}.csv")
+        # Read daily file
+        filename = os.path.join(self.report_dir, f"trades_{date}.csv")
 
-            if not os.path.exists(filename):
-                continue
+        if os.path.exists(filename):
 
             try:
                 with open(filename, 'r', newline='', encoding='utf-8') as f:
@@ -317,3 +311,63 @@ class TradeLogger:
             summary['win_rate'] = (summary['winning_trades'] / summary['total_trades']) * 100
 
         return summary
+
+    def get_trades_for_period(self, symbol: str, date_from: str, date_to: str) -> List[Dict]:
+        """
+        Get all trades for a symbol within a date range.
+
+        Args:
+            symbol: Trading symbol
+            date_from: Start date (YYYY-MM-DD)
+            date_to: End date (YYYY-MM-DD)
+
+        Returns:
+            List of trade dictionaries with entry/exit data
+        """
+        from datetime import datetime, timedelta
+
+        trades = []
+
+        # Parse dates
+        start = datetime.strptime(date_from, '%Y-%m-%d')
+        end = datetime.strptime(date_to, '%Y-%m-%d')
+
+        # Iterate through each day in range
+        current = start
+        while current <= end:
+            date_str = current.strftime('%Y-%m-%d')
+            filename = os.path.join(self.report_dir, f"trades_{date_str}.csv")
+
+            if os.path.exists(filename):
+                try:
+                    with open(filename, 'r', newline='', encoding='utf-8') as f:
+                        reader = csv.DictReader(f)
+
+                        for row in reader:
+                            # Filter by symbol
+                            if row['symbol'] == symbol:
+                                trades.append({
+                                    'timestamp': row['timestamp'],
+                                    'symbol': row['symbol'],
+                                    'bot_type': row['bot_type'],
+                                    'action': row['action'],
+                                    'ticket': row['ticket'],
+                                    'entry_price': float(row['entry_price']) if row['entry_price'] else None,
+                                    'exit_price': float(row['exit_price']) if row['exit_price'] else None,
+                                    'lot_size': float(row['lot_size']) if row['lot_size'] else None,
+                                    'profit_usd': float(row['profit_usd']) if row['profit_usd'] else None,
+                                    'entry_time': row['entry_time'],
+                                    'exit_time': row['exit_time'],
+                                    'duration_minutes': row['duration_minutes'],
+                                    'entry_reason': row['entry_reason'],
+                                    'exit_reason': row['exit_reason'],
+                                    'bias': row['bias'],
+                                    'trend_status': row['trend_status']
+                                })
+
+                except Exception as e:
+                    print(f"Error reading {filename}: {e}")
+
+            current += timedelta(days=1)
+
+        return trades

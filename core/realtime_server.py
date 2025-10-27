@@ -157,6 +157,28 @@ class RealtimeDataServer:
                         'message': f'Invalid timeframe: {timeframe}'
                     }))
 
+            elif command == 'get_trade_history':
+                # Fetch trade history from CSV files
+                symbol = data.get('symbol', self.current_symbol)
+                date_from = data.get('date_from')  # YYYY-MM-DD format
+                date_to = data.get('date_to')      # YYYY-MM-DD format
+
+                try:
+                    trade_history = self.trade_logger.get_trades_for_period(symbol, date_from, date_to)
+
+                    await websocket.send(json.dumps({
+                        'type': 'trade_history',
+                        'symbol': symbol,
+                        'trades': trade_history
+                    }))
+                    print(f"  [OK] Sent {len(trade_history)} trade history entries")
+                except Exception as e:
+                    await websocket.send(json.dumps({
+                        'type': 'error',
+                        'message': f'Error loading trade history: {str(e)}'
+                    }))
+                    print(f"  [ERROR] Trade history load failed: {e}")
+
             elif command == 'get_historical_data':
                 # Fetch exact number of historical bars ending at specified time
                 symbol = data.get('symbol', self.current_symbol)
