@@ -23,7 +23,7 @@ function calculateSnakeColors(snakeValues, closePrices) {
 
 function calculateIndicators(closePrices) {
     // Use AppState periods (user-adjustable via range inputs)
-    const snakePeriod = AppState.snakePeriod || 100;
+    const snakePeriod = AppState.snakePeriod || 25;
     const purplePeriod = AppState.purplePeriod || 10;
 
     const snake = calculateEMA(closePrices, snakePeriod);

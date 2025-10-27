@@ -10,7 +10,7 @@ const AppState = {
     currentSymbol: null,
     currentTimeframe: null,
     signals: [],
-    snakePeriod: 100,
+    snakePeriod: 25,
     purplePeriod: 10
 };
 

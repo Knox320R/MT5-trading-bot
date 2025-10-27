@@ -105,7 +105,7 @@ class WebSocketManager {
 
                     // Set indicator periods from config
                     if (data.data?.indicators) {
-                        AppState.snakePeriod = data.data.indicators.snake_period || 100;
+                        AppState.snakePeriod = data.data.indicators.snake_period || 25;
                         AppState.purplePeriod = data.data.indicators.purple_line_period || 10;
 
                         // Update UI inputs to match config
